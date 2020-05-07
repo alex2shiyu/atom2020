@@ -1,0 +1,7 @@
+norb  6
+nmin  2
+nmax  4
+int_type  kanamori
+int_para  3.0 2.4 0.3 0.3 0.3
+soc_type  p
+soc_val   0.28
