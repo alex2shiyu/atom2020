@@ -1,7 +1,19 @@
-norb  6
-nmin  2
-nmax  4
-int_type  kanamori
-int_para  3.0 2.4 0.3 0.3 0.3
-soc_type  p
-soc_val   0.28
+norb        6
+nmin        2
+nmax        4
+int_type    kanamori 
+int_val     3.0 2.4 0.3 0.3 0.3
+soc_type    p 
+soc_val     0.28
+cfd         yes
+gqn         3 
+point_group C4v
+basis_tran  yes
+vpm_type    1 
+
+#gqn:
+#1[pure]: n ;  
+#2[no soc, no cfd]: n, ps, s, sz, l, lz; 
+#3[soc, no cfd]: n, j, jz (double group of SO(3))
+#4[no soc, cdf]: n, s, sz, irrep of point group
+#5[soc, cfd]: n, irrep of double of point group

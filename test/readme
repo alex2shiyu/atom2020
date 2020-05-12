@@ -1,0 +1,3 @@
+test_make_cumat : succeed - test making of cumat 
+test_mod        : succeed - test the mod named mod_read and mod_dump copied from rtgw2020
+test_read       : succeed - test the reading of <atom2020.incar>

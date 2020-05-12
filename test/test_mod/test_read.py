@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-from mod_read import read_2dr, dump_2dr
+from module.mod_read import read_2dr, dump_2dr
 import numpy as np
 from  MakeFock import *
 
