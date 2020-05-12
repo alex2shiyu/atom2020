@@ -132,3 +132,144 @@ subroutine atomic_make_cumat(norbs, Uc, Uv, Jz, Js, Jp, cumat )
      close(11)
      return
 end subroutine atomic_make_cumat
+
+
+  subroutine atomic_tran_cumat(norbs, amtrx, cumat, cumat_t)
+
+     implicit none
+
+! number of orbits
+     integer, intent(in) :: norbs
+
+! transformation matrix from orginal basis to natural basis
+     complex(kind=8), intent(in) :: amtrx(norbs, norbs)
+
+! coefficents matrix for generalized interaction U in orginal basis
+     complex(kind=8), intent(in) :: cumat(norbs, norbs, norbs, norbs)
+ 
+! coefficents matrix for generalized interaction U in natural basis
+     complex(kind=8), intent(out) :: cumat_t(norbs, norbs, norbs, norbs)
+
+! local varoables
+! loop index over orbits in orginal single particle basis
+     integer :: alpha1, alpha2
+     integer :: alpha3, alpha4
+
+! loop index over orbits in natural single particle basis
+     integer :: sigma1, sigma2
+     integer :: sigma3, sigma4
+
+! auxiliary complex(dp) variables
+     complex(kind=8) :: ctmp
+
+!f2py intent(in)  norbs
+!f2py intent(in)  amtrx
+!f2py intent(in)  cumat
+!f2py intent(out) cumat_t
+!f2py depend(norbs) amtrx
+!f2py depend(norbs) cumat
+!f2py depend(norbs) cumat_t
+
+
+! initialize cumat_t to be zero
+     cumat_t = dcmplx(0.0D0, 0.0D0)
+
+     sigma1loop: do sigma1=1,norbs
+     sigma2loop: do sigma2=1,norbs
+     sigma3loop: do sigma3=1,norbs
+     sigma4loop: do sigma4=1,norbs
+         ctmp = dcmplx(0.0D0, 0.0D0)
+
+         alpha1loop: do alpha1=1,norbs
+         alpha2loop: do alpha2=1,norbs
+         alpha3loop: do alpha3=1,norbs
+         alpha4loop: do alpha4=1,norbs
+             if (abs(cumat(alpha1, alpha2, alpha3, alpha4)) .lt. 1E-8) cycle
+             ctmp = ctmp + cumat(alpha1, alpha2, alpha3, alpha4)          &
+                  * conjg(amtrx(alpha1, sigma1)) * amtrx(alpha3, sigma3)  &
+                  * conjg(amtrx(alpha2, sigma2)) * amtrx(alpha4, sigma4)
+         enddo alpha4loop ! over alpha4={1,norbs} loop
+         enddo alpha3loop ! over alpha3={1,norbs} loop
+         enddo alpha2loop ! over alpha2={1,norbs} loop
+         enddo alpha1loop ! over alpha1={1,norbs} loop
+
+         cumat_t(sigma1, sigma2, sigma3, sigma4) = ctmp
+     enddo sigma4loop ! over sigma4={1,norbs} loop
+     enddo sigma3loop ! over sigma3={1,norbs} loop
+     enddo sigma2loop ! over sigma2={1,norbs} loop
+     enddo sigma1loop ! over sigma1={1,norbs} loop
+
+!!# if defined (duliang)
+!!     open(mytmp, file='solver.tumat.out')
+!!     call zmat_dump4(mytmp, norbs, norbs, norbs, norbs, cumat_t)
+!!     close(mytmp)
+!!# endif /* duliang */
+     return
+  end subroutine atomic_tran_cumat
+
+!  subroutine atomic_state(norbs,nstat)
+!
+!     implicit none
+!! number of orbitals
+!     integer, intent(in)  :: norbs
+!
+!! number of configuration in each subspace
+!     integer, intent(out) :: nstat(0:norbs)
+!
+!! local variables
+!! loop index over good quantum number
+!     integer :: ibit
+!! loop index over orbits
+!     integer :: iorb
+!     integer :: jorb
+!
+!     do ibit=0,norbs
+!         nstat(ibit) = state_pick(ibit, norbs)
+!     enddo ! over ibit={0,norbs} loop 
+!  end subroutine atomic_state
+!
+!  
+!  !>>> calculate combination algebra 
+!  function state_pick(ntiny, nlarg) result(value)
+!     implicit none
+!
+!! external variables
+!     integer, intent(in) :: ntiny
+!     integer, intent(in) :: nlarg
+!
+!! local variables
+!     integer :: i
+!
+!! auxiliary integer variable
+!     integer :: nlow
+!
+!! numberator of the combination algebra
+!     real(8) :: numer
+!
+!! denominator of the combination algebra
+!     real(8) :: denom
+!
+!! result value of the combination algebra
+!     integer :: value
+!
+!! transform the combination algebra
+!     nlow = min(ntiny, nlarg-ntiny)
+!
+!! numerator in combination algebra
+!     numer = 1.0D0
+!     do i=nlarg-nlow+1,nlarg
+!        numer = numer * dble(i)
+!     enddo ! over i={nlarg-nlow+1,nlarg} loop
+!
+!! denominator in combination algebra
+!     denom = 1.0D0
+!     do i=1,nlow
+!        denom = denom * dble(i)
+!     enddo ! over i={1,nlow} loop
+!
+!! result value
+!     value = nint(numer / denom)
+!
+!     return
+!  end function state_pick
+

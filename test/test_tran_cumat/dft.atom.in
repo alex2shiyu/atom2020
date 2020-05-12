@@ -1,0 +1,18 @@
+==========================================================================
+                    setup parameters for atomic problems
+==========================================================================
+ 10        ! nband : number of bands
+ 2         ! nspin : number of spins
+ 10        ! norbs : number of orbits
+ 8.462     ! ntots : number of total electrons
+ 7         ! nmin  : the minimum occupancy
+ 9         ! nmax  : the maximum occupancy
+ 175       ! ncfgs : number of many-body configurations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+5.0           ! Uc    : intraorbital Coulomb interaction
+3.2000           ! Uv    : interorbital Coulomb interaction
+.900           ! Jz    : Hund coupling parameter
+.900           ! Js    : spin flip parameter
+.900           ! Jp    : pair hopping parameter
+ 0.000     ! lamb  : spin-orbit coupling parameter
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
