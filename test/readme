@@ -1,6 +1,7 @@
 test_make_cumat    : succeed - test making of cumat 
+test_tran_cumat    : succeed - test unitary transformation of four dimensional matrix <cumat>
 test_mod           : succeed - test the mod named mod_read and mod_dump copied from rtgw2020
 test_read          : succeed - test the reading of <atom2020.incar>
 test_fortran_array : succeed - test the difference between array(0:n) and array(1:n) when embeding from python code
 test_make_basis    : succeed - test making basis and Cg 
-test_make_hmat     : ing     - test making hmat
+test_make_hmat     : succeed - test making hmat

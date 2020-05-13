@@ -38,6 +38,7 @@ class Atom():
         self.amat     = amat
         self.point_group = point_group
         self.vpm_type = vpm_type
+        self.ncfgs    = None
 
     @staticmethod
     def from_incar(incar_file = 'atom2020.incar',cemat_file='atom2020.cemat.in',amat_file='atom2020.amat.in'):
@@ -139,6 +140,25 @@ class Atom():
             cfd_mat = None
             return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,basis_tran,amat,vpm_type)
 
+    def make_ncfgs(self):
+        '''
+        just calculate the ncfgs of working space
+        '''
+        from scipy.special import comb
+        ncfgs = np.int(0)
+        for i in range(self.nmin,self.nmax+1):
+            ncfgs = comb(self.norb, i) + ncfgs
+        self.ncfgs = np.int(ncfgs)
+
+    def make_totncfgs(self):
+        '''
+        calculate the total number of configurations of the whole shell
+        for example : p: 64
+                      d: 1024
+        '''
+        import math
+        totncfgs = math.pow(2, self.norb)
+        return totncfgs
 
     def check_incar(self):
         """
@@ -173,4 +193,15 @@ class Atom():
         if self.basis_tran == 'no' :
             print("Are you sure the basis need not to transform to natural basis from atomic basis!")
 
-
+    def show_incar(self):
+        print('self.norb:\n',self.norb)
+        print('self.nmin:\n',self.nmin)
+        print('self.nmax:\n',self.nmax)
+        print('self.ncfgs:\n',      self.ncfgs)
+        print('self.int_type:\n',   self.int_type)
+        print('self.int_val:\n',    self.int_val)
+        print('self.soc_type:\n',   self.soc_type)
+        print('self.soc_val:\n',    self.soc_val)
+        print('self.cfd_mat:\n',    self.cfd_mat)
+        print('self.point_group:\n',self.point_group)
+        print('self.vpm_type:\n',   self.vpm_type)
