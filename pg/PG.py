@@ -76,7 +76,7 @@ class TranOrb():
                                            np.array([1,1,1]) for {dyz, dxz, dxy}
           nfunc   =  3  -> the number of basis function, for example n=3 for t2g of d shell, namely "dxy, dyz, dxz"
                         respectively
-          umat    =  ndarray -> the unitary transformation matrxi of the target operator of corresponding point group
+          umat    =  [ndarray,ndarray] -> the unitary transformation matrxi of the target operator of corresponding point group
                                 3*3 numpy array for 3-D real space and 2*2 for 2-D real space
       [O] shell   = "d" -> decide the power of basis function
       [O] func_o  = dict{'struct'=[[[]],[[]],[[]]],'coeff'=[[],[],[]]} first : nfunc * npoly * dim, the structure, 
@@ -89,14 +89,21 @@ class TranOrb():
              convention
     '''
     def __init__(self,umat,npoly,dim=3,npower=2,nfunc=3,shell=None,func_o={}):
-        self.dim    = int(dim)
-        self.npower = int(npower)
-        self.npoly  = np.array(npoly,dtype=np.int32)
-        self.nfunc  = int(nfunc)
-        self.umat   = np.array(umat)
-        self.shell  = shell
-        self.func_o = func_o
-        self.umat_mb= np.zeros(self.umat.shape,dtype=np.float64)
+        '''
+        input: 
+               mapbasis : map index (the index of "x2" is "200", and index of "xyz" is "111") to their position in the
+                       basis function space 
+        '''
+        self.dim       = int(dim)
+        self.npower    = int(npower)
+        self.npoly     = np.array(npoly,dtype=np.int32)
+        self.nfunc     = int(nfunc)
+        self.umat      = []
+        self.shell     = shell
+        self.func_o    = func_o
+        self.umat_mb   = []
+        self.mapbasis  = {}
+        self.nop       = len(self.umat)
         
         assert self.shell in ['s','p','t2g','d','f'],   "I can not recognize shell"
         assert self.dim > 0, "dim should great than zero as input of tran_orbital"
@@ -171,16 +178,55 @@ class TranOrb():
         self.func_o['coeff']  = coeff
             
         
-    def coord_map(self):
+    def make_mapbasis(self):
         '''
-        aim : I map every basis to a vector and then comes a problem:
-              if I know a polynomia(x2 in dz2), how do I know the position of x2 in the set of basis of the vection rep.
+        aim    : I map every basis to a vector and then comes a problem:
+                 if I know a polynomia(x2 in dz2), how do I know the position of x2 in the set of basis of the vection rep.
         output : self.label(x2) = 2 (2 means the third position in vection)
         '''
         cnt = int(-1)
-        if self.npower == 2 :
-            for k in range(self.npower+1):
-                for j in range(self.npower+1):
-                    for i in range(self.npower+1):
-                        if abs(sum(k+j+i) - 2) :
-                            lab_tmp = str(i) + str(j) + str(k)
+        for k in range(self.npower+1):
+            for j in range(self.npower+1):
+                for i in range(self.npower+1):
+                    if abs(k+j+i - self.npower) < 1.0E-6 :
+                        cnt = cnt + 1
+                        lab_tmp = str(i) + str(j) + str(k)
+                        self.mapbasis[lab_tmp] = cnt
+
+    def make_func_new(self):
+        '''
+        <the main part of this class>
+        aim: make transfromation matrix of operators of point group in the space of s p d f orbitals
+        '''
+        for ifunc in range(self.nfunc):
+            for ipoly in range(self.npoly[ifunc])
+                poly_struct = self.func_o['struct'][ifunc,ipoly,:]
+                poly_coeff  = self.func_o['coeff'][ifunc,ipoly]
+                # below I will use a new function which need to perform soon later
+
+    def tran_func(self,struct_t,coeff_t,umat):
+        '''
+        aim : I will tranfrom (for example <xy>) to a linear combination of the basis (for example <dxy> <dyz> <dxz>)
+        input :
+               struct_t = [1,1,0] (for xy function)
+               coeff_t  = real number which is the coefficient of the polynomia (xy for example) in the basis function
+                          (for example dxy here, which in this case coeff_t is 1.0) 
+               umat     = the representation matrix of operators of point group in cartesian space
+                          (this function cope with just one operator once, for loop over every umat
+                          of self.umat will be done in make_func_new function)
+        '''
+        # construct new_struct,for example struct_t = np.array([2,1,1]), umat=np.array([[1,1,0],[0,1,1],[1,1,1]])
+        # new_struct = np.array([[1,1,0],[1,1,0],[0,1,1],[1,1,1]])
+        new_struct = np.zeros((self.npower,self.dim),dtype=np.int32)
+        cnt_t = int(-1)
+        for idim in range(self.dim):
+            if struct_t[idim] > 0 :
+                for imulti in range(struct_t[idim]):
+                    cnt_t = cnt_t + 1
+                    new_struct[cnt_t,:]  = umat[idim,:]
+        new_struct = new_struct * coeff_t 
+        # make 
+
+    # permutation of new_struct to construct new polynomias
+    @staticmethod
+    def pmutt(newstruct,)
