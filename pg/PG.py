@@ -1,0 +1,186 @@
+from __future__ import division, print_function, absolute_import
+
+import numpy as np
+import pickle as pk
+import os
+import sys
+
+
+
+# double Point group
+class DPG():
+    '''
+    class for double point group
+
+    attributes:
+        pgid[I]          : serial number of point group
+   [NY] name_hm[str]     : Hermann-Mauguin symbol for point group
+        name_sc[str]     : schonflies notation for point group
+        nrank[I]         : rank of the double point group
+        rep_vec[list]    : vec rep in (x,y,z) space
+        rep_spin[list]   : vec rep in (up,dn) space
+        mb_shell[str]    : shell of atom -> s p d f
+        mb_norb[I]       : number of orbitals of the corresponding shell
+        mb_rep[ndarray]  : the operator matrix in joint space of s or p or d or f
+        nclass[I]        : number of class
+        irrep[list]      : irreducible representation of double point group
+        gen_pos[ndarray] : position of generator in rep  
+        gen_mul[ndarray] : number of elements of irrep in rep  
+
+    comment: [NY] not yet implemented
+    '''
+    def __init__(self, name_sc='', pgid=0):
+        self.name_sc   = name_sc
+        self.pgid      = pgid
+        self.nrank     = None
+        self.rep_vec   = None
+        self.rep_spin  = None
+        self.mb_shell  = None
+        self.mb_norb   = None
+        self.mb_rep    = None
+        self.nclass    = None
+        self.irreps    = None
+        self.gen_pos   = None
+        self.gen_mul   = None
+
+    def def_mb_byhand(self,case='f'):
+        if case == 'f' :
+            num_oprt = 10 # just for D2h double point group
+            a = np.zeros((7,7),dtype = np.float64)# the orbitals number is same with that of wannier90
+
+        elif case == 'd' :
+            a == np.zeros((5,5),dtype = np.float64)
+        elif case == 't2g' :
+            a == np.zeros((3,3),dtype = np.float64)
+        elif case == 'p' :
+            a == np.zeros((3,3),dtype = np.float64)
+        else :
+            raise ValueError('PG can\'t recognize the value: ',case)
+
+class Irrep:
+    def __init__(self):
+        self.label = ''  # label for the representation. 'd' as postfix indicates double-valued irreps
+        self.dim = 1  # dimension of the representation
+        self.matrices = []  # representation matrices, ordered as the operations of the belonging group
+        self.characters = []  # characters as a list, ordered the same as matrices
+
+class TranOrb():
+    '''
+    aim:  once we know the representation of an operator in the space of (x,y,z),
+          how to get the representation of that operator in the space of p or d or f shell
+    input: 
+          dim     =  3  -> decide the dimension of coordinates
+          npower  =  2  -> decide the maximum power of basis function: for example npower=2 for example 
+                           dxy= sqrt(15/4*pi)*{xy \over r^2}
+          npoly   =  np.array([1,1,1])  -> the number of polynomials of each basis function for example
+                                           np.array([1,1,1]) for {dyz, dxz, dxy}
+          nfunc   =  3  -> the number of basis function, for example n=3 for t2g of d shell, namely "dxy, dyz, dxz"
+                        respectively
+          umat    =  ndarray -> the unitary transformation matrxi of the target operator of corresponding point group
+                                3*3 numpy array for 3-D real space and 2*2 for 2-D real space
+      [O] shell   = "d" -> decide the power of basis function
+      [O] func_o  = dict{'struct'=[[[]],[[]],[[]]],'coeff'=[[],[],[]]} first : nfunc * npoly * dim, the structure, 
+                                                      second: nfunc * npoly      , the coefficients(you can drop the
+                                                      over coefficients)
+    note: 
+          1. at least one of shell and func_o should be give
+          2. orbital order should better be arranged as that in userguide of wannier90 if you just give "shell" instead
+             of both "shell" and "fun_o" because we will automatically produce the fun_o in the order of wannier90's
+             convention
+    '''
+    def __init__(self,umat,npoly,dim=3,npower=2,nfunc=3,shell=None,func_o={}):
+        self.dim    = int(dim)
+        self.npower = int(npower)
+        self.npoly  = np.array(npoly,dtype=np.int32)
+        self.nfunc  = int(nfunc)
+        self.umat   = np.array(umat)
+        self.shell  = shell
+        self.func_o = func_o
+        self.umat_mb= np.zeros(self.umat.shape,dtype=np.float64)
+        
+        assert self.shell in ['s','p','t2g','d','f'],   "I can not recognize shell"
+        assert self.dim > 0, "dim should great than zero as input of tran_orbital"
+        assert self.func_o != {} or self.shell != None, "you should give at least one of <shell> and <func_o>"
+
+    def def_func(self):
+        '''
+        define func_o respect to the given value of shell
+        '''
+        ph1=np.sqrt(5/2);ph2=2*np.sqrt(15);ph3=np.sqrt(3/2)
+        ph5=np.sqrt(3/2);ph6=np.sqrt(15);ph7=np.sqrt(5/2)
+        struct = np.zeros((self.nfunc,np.max(self.npoly),self.dim),dtype=np.int32)
+        coeff  = np.zeros((self.nfunc,np.max(self.npoly)),dtype=np.float64)
+        if self.shell == None:
+            print("you should not use this method if you do not give <shell>!")
+        elif self.shell == 'f':
+            # orbital order : fz3,fxz2,fyz2,fz(x2-y2),fxyz,fx(x2-3y2),fy(3x2-y2)
+            # the polynomial order : as hamonic sphere function table in wikipedia
+            # for example : fz3 = 2z3 -3zx2 -3zy2 (I always like drop the overall coefficients, for example
+            # 1/4*sqrt(7/pi)/r3 here.
+            # fz3
+            struct[0,0,0:3] = np.array([0,0,3])
+            struct[0,1,0:3] = np.array([2,0,1])
+            struct[0,2,0:3] = np.array([0,2,1])
+            coeff[0,0] = 2
+            coeff[0,1] =-3
+            coeff[0,2] =-3
+            # fxz2
+            struct[1,0,0:3] = np.array([1,0,2])
+            struct[1,1,0:3] = np.array([3,0,0])
+            struct[1,2,0:3] = np.array([1,2,0])
+            coeff[1,0] = ph5 * 4
+            coeff[1,1] =-ph5 
+            coeff[1,2] =-ph5
+            # fyz2
+            struct[2,0,0:3] = np.array([0,1,2])
+            struct[2,1,0:3] = np.array([2,1,0])
+            struct[2,2,0:3] = np.array([0,3,0])
+            coeff[2,0] = ph3 * 4
+            coeff[2,1] =-ph3 
+            coeff[2,2] =-ph3
+            # fz(x2-y2)
+            struct[3,0,0:3] = np.array([2,0,1])
+            struct[3,1,0:3] = np.array([0,2,1])
+            coeff[3,0] = ph6
+            coeff[3,1] =-ph6 
+            # fxyz
+            struct[4,0,0:3] = np.array([1,1,1])
+            coeff[4,0] = ph2
+            # fx(x2-3y2)
+            struct[5,0,0:3] = np.array([3,0,0])
+            struct[5,1,0:3] = np.array([1,2,0])
+            coeff[5,0] = ph7
+            coeff[5,1] =-ph7 * 3 
+            # fx(x2-3y2)
+            struct[6,0,0:3] = np.array([2,1,0])
+            struct[6,1,0:3] = np.array([0,3,0])
+            coeff[6,0] = ph1 * 3
+            coeff[6,1] =-ph1 
+        elif self.shell == 't2g':
+            # orbital order : wannier90 m=2,3,5 : dxz, dyz, dxy
+            struct[0,0,0:3] = np.array([1,0,1])
+            struct[1,0,0:3] = np.array([0,1,1])
+            struct[2,0,0:3] = np.array([1,1,0])
+            coeff[0,0] = 1
+            coeff[1,0] = 1
+            coeff[2,0] = 1
+        else:
+            raise ValueError("I can not recognize the value of <shell>:",shell)
+        #
+        self.func_o['struct'] = struct
+        self.func_o['coeff']  = coeff
+            
+        
+    def coord_map(self):
+        '''
+        aim : I map every basis to a vector and then comes a problem:
+              if I know a polynomia(x2 in dz2), how do I know the position of x2 in the set of basis of the vection rep.
+        output : self.label(x2) = 2 (2 means the third position in vection)
+        '''
+        cnt = int(-1)
+        if self.npower == 2 :
+            for k in range(self.npower+1):
+                for j in range(self.npower+1):
+                    for i in range(self.npower+1):
+                        if abs(sum(k+j+i) - 2) :
+                            lab_tmp = str(i) + str(j) + str(k)
