@@ -1,0 +1,6 @@
+*.f90 linguist-language=python
+*.so linguist-language=python
+*.py linguist-language=python
+*.in linguist-language=python
+*.pbs linguist-language=python
+*.dat linguist-language=python
