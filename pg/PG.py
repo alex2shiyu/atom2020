@@ -4,8 +4,7 @@ import numpy as np
 import pickle as pk
 import os
 import sys
-
-
+from pg.PG_util import pmutt
 
 # double Point group
 class DPG():
@@ -78,6 +77,12 @@ class TranOrb():
                         respectively
           umat    =  [ndarray,ndarray] -> the unitary transformation matrxi of the target operator of corresponding point group
                                 3*3 numpy array for 3-D real space and 2*2 for 2-D real space
+                     note that the umat is not R(\hat{n},\phi) but R^{-1}(\hat{n},\phi) = R(\hat{n},-\phi)
+                     the former one evaluate the new corrdinates of a point in the old cartisian system(r) after
+                     transformation, but the latter one means the new corrdinates of a point in the new cartisian
+                     system(r'=Rr) after the same transformation
+                     the formula of R(\hat{n},\phi) operate on a vec is :
+                     r' = Rr or r = R^{-1}r' not r'^T = r^T R like that of representation theory of group theory
       [O] shell   = "d" -> decide the power of basis function
       [O] func_o  = dict{'struct'=[[[]],[[]],[[]]],'coeff'=[[],[],[]]} first : nfunc * npoly * dim, the structure, 
                                                       second: nfunc * npoly      , the coefficients(you can drop the
@@ -98,12 +103,13 @@ class TranOrb():
         self.npower    = int(npower)
         self.npoly     = np.array(npoly,dtype=np.int32)
         self.nfunc     = int(nfunc)
-        self.umat      = []
+        self.umat      = umat
         self.shell     = shell
         self.func_o    = func_o
         self.umat_mb   = []
         self.mapbasis  = {}
         self.nop       = len(self.umat)
+        self.vec_oldbasis = None
         
         assert self.shell in ['s','p','t2g','d','f'],   "I can not recognize shell"
         assert self.dim > 0, "dim should great than zero as input of tran_orbital"
@@ -198,11 +204,35 @@ class TranOrb():
         <the main part of this class>
         aim: make transfromation matrix of operators of point group in the space of s p d f orbitals
         '''
+        for iop  in range(self.nop):
+            umat_tmp = self.umat[iop]
+            umat_new = np.zeros(umat_tmp.shape,dtype=np.float64)
+            for ifunc in range(self.nfunc):
+                vec_ifunc = np.zeros(len(list(self.mapbasis.values())),np.float64)
+                for ipoly in range(self.npoly[ifunc]):
+                    vec_ifunc_ipoly = np.zeros(len(list(self.mapbasis.values())),np.float64)
+                    poly_struct = self.func_o['struct'][ifunc,ipoly,:]
+                    poly_coeff  = self.func_o['coeff'][ifunc,ipoly]
+                    vec_ifunc_ipoly = tran_func(poly_struct,poly_coeff,umat_tmp)
+                    vec_ifunc += vec_ifunc_ipoly
+                # I will write a new function to decompose 
+    
+
+
+    # should use this func after self.func_o has been assigned
+    def make_vec_oldbasis(self):
+        '''
+        I will construct the vec representation of the old function
+        '''
+        vec_old = np.zeros((len(list(self.mapbasis.values())),self.nfunc),dtype=np.float64)
         for ifunc in range(self.nfunc):
-            for ipoly in range(self.npoly[ifunc])
-                poly_struct = self.func_o['struct'][ifunc,ipoly,:]
-                poly_coeff  = self.func_o['coeff'][ifunc,ipoly]
-                # below I will use a new function which need to perform soon later
+            for ipoly in range(self.npoly[ifunc]):
+                name_tmp = str(self.func_o['struct'][ifunc,ipoly,0]) \
+                        + str(self.func_o['struct'][ifunc,ipoly,1]) \
+                        + str(self.func_o['struct'][ifunc,ipoly,2])
+                vec_old[self.mapbasis[name_tmp],ifunc] = self.func_o['coeff'][ifunc,ipoly]
+        self.vec_oldbasis = vec_old
+
 
     def tran_func(self,struct_t,coeff_t,umat):
         '''
@@ -214,10 +244,12 @@ class TranOrb():
                umat     = the representation matrix of operators of point group in cartesian space
                           (this function cope with just one operator once, for loop over every umat
                           of self.umat will be done in make_func_new function)
+        note : should first assign self.mapbasis
         '''
         # construct new_struct,for example struct_t = np.array([2,1,1]), umat=np.array([[1,1,0],[0,1,1],[1,1,1]])
         # new_struct = np.array([[1,1,0],[1,1,0],[0,1,1],[1,1,1]])
-        new_struct = np.zeros((self.npower,self.dim),dtype=np.int32)
+        basis_vec = np.zeros(len(list(self.mapbasis.values())),np.float64)
+        new_struct = np.zeros((self.npower,self.dim),dtype=np.float64)
         cnt_t = int(-1)
         for idim in range(self.dim):
             if struct_t[idim] > 0 :
@@ -225,8 +257,30 @@ class TranOrb():
                     cnt_t = cnt_t + 1
                     new_struct[cnt_t,:]  = umat[idim,:]
         new_struct = new_struct * coeff_t 
-        # make 
+        # pmutt
+        pmutt_basis,pmutt_coeff = pmutt(new_struct) 
+        for i in range(len(pmutt_basis)):
+            corrd_i = self.mapbasis(pmutt_basis[i])
+            basis_vec[corrd_i] = pmutt_coeff[pmutt_basis[i]]
 
-    # permutation of new_struct to construct new polynomias
-    @staticmethod
-    def pmutt(newstruct,)
+        return basis_vec 
+
+        
+#   @staticmethod
+#   def pmutt_index_list(drow,dcol=int(2)):
+#       '''
+#       it's an auxiliary function of pmutt
+#       aim : to produce all the index of a permutation which means all the possibility of taking only one element
+#             from every row of drow * dcol array
+#       input : (the shape of the array)
+#               drow: (integer)
+#           [O] dcol: (integer) if not given, it will be set as 3(x,y,z) automatically 
+#       output  : ndarray of all the possible permutation
+#                 list of all the possible permutation
+#       example : input  : drow = 2, dcol = 2
+#                 output : np.array([[0,0],[0,1],[1,0],[1,1]])
+#                          ['00','01','10','11']
+#       '''
+#       cnt = int(0)
+#       if  int(drow) == 1 : 
+#           for i in range(dcol):
