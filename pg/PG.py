@@ -4,7 +4,7 @@ import numpy as np
 import pickle as pk
 import os
 import sys
-from pg.PG_util import pmutt
+from pg.PG_util import pmutt, decompose_vec
 
 # double Point group
 class DPG():
@@ -87,6 +87,7 @@ class TranOrb():
       [O] func_o  = dict{'struct'=[[[]],[[]],[[]]],'coeff'=[[],[],[]]} first : nfunc * npoly * dim, the structure, 
                                                       second: nfunc * npoly      , the coefficients(you can drop the
                                                       over coefficients)
+    output: umat_new [the most important output]
     note: 
           1. at least one of shell and func_o should be give
           2. orbital order should better be arranged as that in userguide of wannier90 if you just give "shell" instead
@@ -106,10 +107,10 @@ class TranOrb():
         self.umat      = umat
         self.shell     = shell
         self.func_o    = func_o
-        self.umat_mb   = []
         self.mapbasis  = {}
         self.nop       = len(self.umat)
         self.vec_oldbasis = None
+        self.umat_new   = []
         
         assert self.shell in ['s','p','t2g','d','f'],   "I can not recognize shell"
         assert self.dim > 0, "dim should great than zero as input of tran_orbital"
@@ -177,6 +178,36 @@ class TranOrb():
             coeff[0,0] = 1
             coeff[1,0] = 1
             coeff[2,0] = 1
+        elif self.shell == 'd':
+            ph1 = float(1.0);ph2 = 2.0*np.sqrt(3);ph3=ph2
+            ph4 = np.sqrt(3);ph5=ph2
+            # orbital order : wannier90  : dz2, dxz, dyz, dx2-y2, dxy
+            # z2
+            struct[0,0,0:3] = np.array([2,0,0])
+            struct[0,1,0:3] = np.array([0,2,0])
+            struct[0,2,0:3] = np.array([0,0,2])
+            # xz
+            struct[1,0,0:3] = np.array([1,0,1])
+            # yz
+            struct[2,0,0:3] = np.array([0,1,1])
+            # x2-y2
+            struct[3,0,0:3] = np.array([2,0,0])
+            struct[3,1,0:3] = np.array([0,2,0])
+            # xy
+            struct[4,0,0:3] = np.array([1,1,0])
+            # z2
+            coeff[0,0] = -1
+            coeff[0,1] = -1
+            coeff[0,2] =  2
+            # xz
+            coeff[1,0] = ph2
+            # yz
+            coeff[2,0] = ph3
+            # x2-y2
+            coeff[3,0] = ph4
+            coeff[3,1] =-ph4
+            # xy
+            coeff[4,0] = ph5
         else:
             raise ValueError("I can not recognize the value of <shell>:",shell)
         #
@@ -199,25 +230,6 @@ class TranOrb():
                         lab_tmp = str(i) + str(j) + str(k)
                         self.mapbasis[lab_tmp] = cnt
 
-    def make_func_new(self):
-        '''
-        <the main part of this class>
-        aim: make transfromation matrix of operators of point group in the space of s p d f orbitals
-        '''
-        for iop  in range(self.nop):
-            umat_tmp = self.umat[iop]
-            umat_new = np.zeros(umat_tmp.shape,dtype=np.float64)
-            for ifunc in range(self.nfunc):
-                vec_ifunc = np.zeros(len(list(self.mapbasis.values())),np.float64)
-                for ipoly in range(self.npoly[ifunc]):
-                    vec_ifunc_ipoly = np.zeros(len(list(self.mapbasis.values())),np.float64)
-                    poly_struct = self.func_o['struct'][ifunc,ipoly,:]
-                    poly_coeff  = self.func_o['coeff'][ifunc,ipoly]
-                    vec_ifunc_ipoly = tran_func(poly_struct,poly_coeff,umat_tmp)
-                    vec_ifunc += vec_ifunc_ipoly
-                # I will write a new function to decompose 
-    
-
 
     # should use this func after self.func_o has been assigned
     def make_vec_oldbasis(self):
@@ -232,6 +244,41 @@ class TranOrb():
                         + str(self.func_o['struct'][ifunc,ipoly,2])
                 vec_old[self.mapbasis[name_tmp],ifunc] = self.func_o['coeff'][ifunc,ipoly]
         self.vec_oldbasis = vec_old
+
+
+    def make_func_new(self):
+        '''
+        <the main part of this class>
+        aim: make transfromation matrix of operators of point group in the space of s p d f orbitals
+        '''
+        umat_new_list = []
+        for iop  in range(self.nop):
+#           the components arrange as rows
+            umat_tmp = self.umat[iop]
+            umat_new = np.zeros((self.nfunc,self.nfunc),dtype=np.float64)
+            for ifunc in range(self.nfunc):
+                vec_ifunc = np.zeros(len(list(self.mapbasis.values())),np.float64)
+                for ipoly in range(self.npoly[ifunc]):
+                    vec_ifunc_ipoly = np.zeros(len(list(self.mapbasis.values())),np.float64)
+                    poly_struct = self.func_o['struct'][ifunc,ipoly,:]
+                    poly_coeff  = self.func_o['coeff'][ifunc,ipoly]
+                    print('ifunc=',ifunc,'ipoly=',ipoly)
+                    print('poly_struct:',poly_struct)
+                    print('poly_coeff:',poly_coeff)
+                    print('umat_tmp:\n',umat_tmp)
+                    vec_ifunc_ipoly = self.tran_func(poly_struct,poly_coeff,umat_tmp)
+                    print('vec_ifunc_ipoly\n',vec_ifunc_ipoly)
+                    vec_ifunc += vec_ifunc_ipoly
+                    print(2*'-')
+                print(5*'-')
+                # I will write a new function to decompose 
+                print('ifunc=',ifunc,'ipoly=',ipoly)
+                print('vec_ifunc\n',vec_ifunc)
+                rep_new_tmp = decompose_vec(self.vec_oldbasis,vec_ifunc)
+#               the components arrange as rows
+                umat_new[ifunc,:] = rep_new_tmp
+            umat_new_list.append(umat_new)
+        self.umat_new = umat_new_list
 
 
     def tran_func(self,struct_t,coeff_t,umat):
@@ -256,14 +303,14 @@ class TranOrb():
                 for imulti in range(struct_t[idim]):
                     cnt_t = cnt_t + 1
                     new_struct[cnt_t,:]  = umat[idim,:]
-        new_struct = new_struct * coeff_t 
+        new_struct = new_struct 
         # pmutt
         pmutt_basis,pmutt_coeff = pmutt(new_struct) 
         for i in range(len(pmutt_basis)):
-            corrd_i = self.mapbasis(pmutt_basis[i])
+            corrd_i = self.mapbasis[pmutt_basis[i]]
             basis_vec[corrd_i] = pmutt_coeff[pmutt_basis[i]]
 
-        return basis_vec 
+        return basis_vec * coeff_t
 
         
 #   @staticmethod
