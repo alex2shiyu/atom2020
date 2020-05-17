@@ -12,14 +12,26 @@ def decompose_vec(basis_vec, target_vec):
                         and a column means a basis,the number of column(dcol) means the number of basis
             target_vec: one dimension ndarray
     output: one dimension ndarray with length of <dcol> of basis_vec
+    formula : V = \sum_i a_i A_i, A_i = \sum_j b_{ji} B_j, 
+              thus, V = \sum_{ij} a_i b_{ji} B_j = \sum_j v_j B_j
+              here A_i means funciton basis, like seven f orbitals, while B_j is the polynomia basis like {x3,x2y,...}
+              ten in total of f orbitals. Thus b is a retangular matrix not square matrix.
+              problem: is I know v_j, how to get a_i in the case that {A_i} is not orthogonal and SO DOES {B_i}?
+              b a = v  --->  b^T b a = b^T v  --->  b_new = (b^T b) is a square matrix which can be inversed 
+              ---> a = (b^T b)^{-1} b^T v 
+
     '''
     drow,dcol = basis_vec.shape
     rep_new   = np.zeros(dcol,dtype=np.float64)
-    for i in range(dcol):
-        basis_tmp = basis_vec[:,i]
-        vec_inner = np.dot(basis_tmp,target_vec)
-        basis_mod = np.dot(basis_tmp,basis_tmp)
-        rep_new[i] = vec_inner / basis_mod
+    basis_vec_tmp = np.dot(np.transpose(basis_vec),basis_vec)
+    basis_vec_inv = np.linalg.inv(basis_vec_tmp)
+    basis_util    = np.dot(basis_vec_inv,np.transpose(basis_vec))
+    rep_new   = np.einsum('ij,j->i', basis_util, target_vec)
+#   for i in range(dcol):
+#       basis_tmp = basis_vec[:,i]
+#       vec_inner = np.dot(basis_tmp,target_vec)
+#       basis_mod = np.dot(basis_tmp,basis_tmp)
+#       rep_new[i] = vec_inner / basis_mod
     # check the completeness of decomposition
     check_o = np.einsum('ij,j->i', basis_vec, rep_new)
     error = np.abs(target_vec - check_o)
@@ -27,8 +39,11 @@ def decompose_vec(basis_vec, target_vec):
         print('>>> decomposition succeed ...')
         return rep_new
     else:
+        print("error=\n",error)
         print("basis_vec \n",basis_vec)
         print("target_vec \n",target_vec)
+        print("check_o \n",check_o)
+        print("rep_new \n",rep_new)
         raise Exception("decomposition not successfull in PG_util.decompose_vec")
 
 

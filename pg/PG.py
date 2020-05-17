@@ -115,6 +115,27 @@ class TranOrb():
         assert self.shell in ['s','p','t2g','d','f'],   "I can not recognize shell"
         assert self.dim > 0, "dim should great than zero as input of tran_orbital"
         assert self.func_o != {} or self.shell != None, "you should give at least one of <shell> and <func_o>"
+#
+        self.show_attribute()
+        self.def_func()
+        self.make_mapbasis()
+        print('mapbasis=',self.mapbasis)
+        self.make_vec_oldbasis()
+        print('vec_oldbasis=',self.vec_oldbasis)
+        self.make_func_new()
+
+    def show_attribute(self):
+        print('dim=',self.dim)
+        print('npower=',self.npower)
+        print('npoly=',self.npoly)
+        print('nfunc=',self.nfunc)
+        print('umat=',self.umat)
+        print('nop=',self.nop)
+        print('shell=',self.shell)
+        print('func_o=',self.func_o)
+        print('mapbasis=',self.mapbasis)
+        print('vec_oldbasis=',self.vec_oldbasis)
+        print('umat_new=',self.umat_new)
 
     def def_func(self):
         '''
@@ -165,7 +186,7 @@ class TranOrb():
             struct[5,1,0:3] = np.array([1,2,0])
             coeff[5,0] = ph7
             coeff[5,1] =-ph7 * 3 
-            # fx(x2-3y2)
+            # fy(3x2-y2)
             struct[6,0,0:3] = np.array([2,1,0])
             struct[6,1,0:3] = np.array([0,3,0])
             coeff[6,0] = ph1 * 3
