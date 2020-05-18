@@ -7,3 +7,12 @@ def atomic_state(norbs):
         nstat[i] = comb(norbs,i)
     return nstat
 
+class MB_pg():
+    '''
+    aim : make an object of PG(generators only) in sub space of \hat{N}
+    '''
+
+    def __init__(self,):
+        '''
+        make a instance of matrix rep(many body), irreps, characters, class_num
+        '''

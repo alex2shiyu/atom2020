@@ -5,6 +5,94 @@ import pickle as pk
 import os
 import sys
 
+def get_TranOrb_param(orb_case):
+    if orb_case == 'f' :
+        npoly1=np.array([3,3,3,2,1,2,2],dtype=np.int32)
+        dim1    = 3
+        npower1 = 3
+        nfunc1  = 7
+    elif orb_case == 'd' :
+         npoly1=np.array([3,1,1,2,1],dtype=np.int32)
+         dim1    = 3
+         npower1 = 2
+         nfunc1  = 5
+    elif orb_case == 't2g' :
+         npoly1=np.array([1,1,1],dtype=np.int32)
+         dim1    = 3
+         npower1 = 2
+         nfunc1  = 3
+    return npoly1, dim1, npower1, nfunc1
+
+def Point_ID(sch):
+    '''
+    convert schoenflies to serial number ID
+    '''
+    if sch == 'C1' or '1':
+        return int(1)
+    elif sch == 'Ci' or '-1':
+        return int(2)
+    elif sch == 'C2' or '2':
+        return int(3)
+    elif sch == 'Cs' or 'm':
+        return int(4)
+    elif sch == 'C2h' or '2/m':
+        return int(5)
+    elif sch == 'D2' or '222':
+        return int(6)
+    elif sch == 'C2v' or 'mm2':
+        return int(7)
+    elif sch == 'D2h' or 'mmm':
+        return int(8)
+    elif sch == 'C4' or '4':
+        return int(9)
+    elif sch == 'S4' or '-4':
+        return int(10)
+    elif sch == 'C4h' or '4/m':
+        return int(11)
+    elif sch == 'D4' or '422':
+        return int(12)
+    elif sch == 'C4v' or '4mm':
+        return int(13)
+    elif sch == 'D2d' or '-42m':
+        return int(14)
+    elif sch == 'D4h' or '4/mmm':
+        return int(15)
+    elif sch == 'C3' or '3':
+        return int(16)
+    elif sch == 'C3i' or '-3':
+        return int(17)
+    elif sch == 'D3' or '32':
+        return int(18)
+    elif sch == 'C3v' or '3m':
+        return int(19)
+    elif sch == 'D3d' or '-3m':
+        return int(20)
+    elif sch == 'C6' or '6':
+        return int(21)
+    elif sch == 'C3h' or '-6':
+        return int(22)
+    elif sch == 'C6h' or '6/m':
+        return int(23)
+    elif sch == 'D6' or '622':
+        return int(24)
+    elif sch == 'C6v' or '6mm':
+        return int(25)
+    elif sch == 'D3h' or '-6m2':
+        return int(26)
+    elif sch == 'D6h' or '6/mmm':
+        return int(27)
+    elif sch == 'T' or '23':
+        return int(28)
+    elif sch == 'Th' or 'm-3':
+        return int(29)
+    elif sch == 'O' or '432':
+        return int(30)
+    elif sch == 'Td' or '-43m':
+        return int(31)
+    elif sch == 'Oh' or 'm-3m':
+        return int(32)
+
+
 def decompose_vec(basis_vec, target_vec):
     '''
     aim   : I will decompose the target target_vec into a linear combination of basis_vec

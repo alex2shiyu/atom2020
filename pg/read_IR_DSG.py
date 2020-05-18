@@ -69,6 +69,8 @@ class LittleGroup:  # little group at a special k point
         self.kvecP = []
         self.rotP = []
         self.tauP = []
+        # for point group
+        self.rotcar = [] # the rot matrix in cartisian coordinates
         #
         self.shiftC = np.array([0, 0, 0])
         self.shiftP = np.array([0, 0, 0])
@@ -83,6 +85,15 @@ class LittleGroup:  # little group at a special k point
         self.antiunitary_op = antiunitary_op()
         self.coirreps = []
 
+    # the transformation matrix from conventional lattice to cartisian coordinates
+    def tran_con2car(self,sgid):
+        if sgid in SGHexaP :
+            umat = np.array([[np.sqrt(3)/2,-0.5,0],[0,1.0,0],[0,0,1.0]],dtype=np.float64)
+            for imat in self.rotC:
+                self.rotcar.append(np.dot(np.dot(np.linalg.inv(umat),np.transpose(imat)),umat))
+        if sgid in SGOrthP + SGOrthB2 + SGOrthB1 + SGOrthI + SGCubcI + SGOrthF + SGCubcF :
+            for imat in self.rotC:
+                self.rotcar.append(np.transpose(imat))
     def prim(self):
         # C : direct,     prim. lattices in conv.
         #   : reciprocal, conv. lattices in prim.
@@ -429,6 +440,8 @@ def loadIR(gid, fname=None, test=False, shift=[0, 0, 0], coord='c'):
             # the below line is added by sypeng
 #           grp.find_generators()
             #
+#           transfrom the matrix representation from conventional basis to cartisian coordinates
+            grp.tran_con2car(gid)
             # irreps ======================================================
             #
             line = file.readline()

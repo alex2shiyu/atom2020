@@ -5,6 +5,17 @@ import pickle as pk
 import os
 import sys
 from pg.PG_util import pmutt, decompose_vec
+from pg.read_IR_DSG import loadIR 
+
+class Irrep:
+    '''
+    class of Irrep copied from yijiang's scripts
+    '''
+    def __init__(self):
+        self.label = ''  # label for the representation. 'd' as postfix indicates double-valued irreps
+        self.dim = 1  # dimension of the representation
+        self.matrices = []  # representation matrices, ordered as the operations of the belonging group
+        self.characters = []  # characters as a list, ordered the same as matrices
 
 # double Point group
 class DPG():
@@ -32,7 +43,7 @@ class DPG():
         self.name_sc   = name_sc
         self.pgid      = pgid
         self.nrank     = None
-        self.rep_vec   = None
+        self.rep_vec   = []
         self.rep_spin  = None
         self.mb_shell  = None
         self.mb_norb   = None
@@ -41,6 +52,41 @@ class DPG():
         self.irreps    = None
         self.gen_pos   = None
         self.gen_mul   = None
+        self.irreps_class = []
+  
+    def show_attribute(self):
+        print(10*'-')
+        print('name_sc:',self.name_sc)
+        print('pgid:',self.pgid)
+        print('nrank:',self.nrank)
+        print('nclass:',self.nclass)
+        print('mb_norb:',self.mb_norb)
+        print('rep_vec:\n',self.rep_vec)
+        print('rep_spin:\n',self.rep_spin)
+        print('mb_shell:\n',self.mb_shell)
+        print('irreps:\n',self.irreps)
+        print('gen_pos:\n',self.gen_pos)
+        print('gen_mul:\n',self.gen_mul)
+        print('irreps_class:\n',self.irreps_class)
+    # should first assign self.irreps
+    def groupclass_irrep(self):
+        self.gen_pos = np.array([0,1,2,3,4,5,6,7,8,12],dtype=np.int32)
+        self.gen_mul = np.array([1,2,2,2,1,2,2,2,1,1],dtype=np.int32)
+        self.nclass = len(self.gen_pos)
+        for ir in self.irreps:
+            irr = Irrep()
+            irr.label = ir.label
+            irr.dim   = ir.dim
+#           character_reduce = np.array([ir.characters[self.gen_pos[i]].real for i in range(self.nclass)])
+            character_reduce = []
+            matrix_reduce = []
+            for igen in range(self.nclass):
+                character_reduce.append(ir.characters[self.gen_pos[igen]])
+                matrix_reduce.append(ir.matrices[self.gen_pos[igen]])
+            irr.matrices = matrix_reduce
+            irr.characters =np.array(character_reduce)
+            self.irreps_class.append(irr)
+
 
     def def_mb_byhand(self,case='f'):
         if case == 'f' :
@@ -56,12 +102,53 @@ class DPG():
         else :
             raise ValueError('PG can\'t recognize the value: ',case)
 
-class Irrep:
-    def __init__(self):
-        self.label = ''  # label for the representation. 'd' as postfix indicates double-valued irreps
-        self.dim = 1  # dimension of the representation
-        self.matrices = []  # representation matrices, ordered as the operations of the belonging group
-        self.characters = []  # characters as a list, ordered the same as matrices
+    def get_data(self,sgid):
+        for gid in range(sgid,sgid+1):
+            lgrps = loadIR(gid)
+        for grp in lgrps:
+            if grp.klabel == 'GM' :
+                self.nrank    = len(grp.rotC)
+                self.rep_vec  = grp.rotcar
+                self.rep_spin = grp.su2s
+                self.irreps   = grp.irreps
+                print('dpg71.nrank:\n',self.nrank)
+                print('rotC:\n',grp.rotC)
+                print('dpg71.rep_vec:\n',self.rep_vec)
+                print('dpg71.rep_spin:\n',self.rep_spin)
+                for ir in self.irreps:
+                    print(ir.label,ir.characters.real)
+
+# many body point group
+class Mb_Pg():
+    '''
+    after get all the prerequisite, a class of essential information of point group need by atomic's problem is desired
+    '''
+    def __init__(self, nop, op, irrep):
+        '''
+        attributes:
+            nop [I]       : rank of the point group
+            op  [list]    : a list of numpy.ndarray which is the matrix rep. of operators in natural basis
+            irrep [list]  : a list of Irrep 
+        '''
+        self.nop = nop
+        self.op  = op
+        self.irrep = []
+        for ir in irrep:
+            irr = Irrep()
+            irr.label = ir.label
+            irr.dim   = ir.dim
+            irr.matrices = ir.matrices
+            irr.characters = ir.characters
+            self.irrep.append(irr) 
+        print("check->irrep:\n",type(self.irrep[0])) 
+        if len(self.irrep) > 0 :
+            assert isinstance(self.irrep[0], Irrep)
+
+    def show_attribute(self):
+        print('nop:',self.nop)
+        print('operators:\n',self.op)
+        print('irreps:\n',self.irrep)
+
 
 class TranOrb():
     '''
@@ -94,7 +181,7 @@ class TranOrb():
              of both "shell" and "fun_o" because we will automatically produce the fun_o in the order of wannier90's
              convention
     '''
-    def __init__(self,umat,npoly,dim=3,npower=2,nfunc=3,shell=None,func_o={}):
+    def __init__(self,umat,su2,npoly,dim=3,npower=2,nfunc=3,shell=None,func_o={}):
         '''
         input: 
                mapbasis : map index (the index of "x2" is "200", and index of "xyz" is "111") to their position in the
@@ -105,12 +192,14 @@ class TranOrb():
         self.npoly     = np.array(npoly,dtype=np.int32)
         self.nfunc     = int(nfunc)
         self.umat      = umat
+        self.su2       = su2
         self.shell     = shell
         self.func_o    = func_o
         self.mapbasis  = {}
         self.nop       = len(self.umat)
         self.vec_oldbasis = None
         self.umat_new   = []
+        self.umat_so    = []
         
         assert self.shell in ['s','p','t2g','d','f'],   "I can not recognize shell"
         assert self.dim > 0, "dim should great than zero as input of tran_orbital"
@@ -123,6 +212,14 @@ class TranOrb():
         self.make_vec_oldbasis()
         print('vec_oldbasis=',self.vec_oldbasis)
         self.make_func_new()
+        self.make_umat_so()
+
+    # the most last method to be use in this class:
+    def make_umat_so(self):
+        for i in range(self.nop):
+            mat = np.kron(self.umat_new[i],self.su2[i])
+            self.umat_so.append(mat)
+
 
     def show_attribute(self):
         print('dim=',self.dim)
@@ -136,6 +233,8 @@ class TranOrb():
         print('mapbasis=',self.mapbasis)
         print('vec_oldbasis=',self.vec_oldbasis)
         print('umat_new=',self.umat_new)
+        print('su2=',self.su2)
+        print('umat_so=',self.umat_so)
 
     def def_func(self):
         '''

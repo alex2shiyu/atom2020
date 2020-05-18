@@ -2,6 +2,8 @@
 
 import numpy as np
 from module.mod_read import read_2dc
+from wanntb.soc import atom_hsoc
+from wanntb.tran import tran_op, tmat_c2r
 
 class Atom():
     """
@@ -22,7 +24,7 @@ class Atom():
              soc_mat    [complex128] : soc matrix(single particles)
              cfd_mat    [complex128] : cfd matrix(single particles)
     """
-    def __init__(self,norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,basis_tran,amat,vpm_type):
+    def __init__(self,norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_type):
         self.norb = norb
         self.nmin = nmin
         self.nmax = nmax
@@ -37,8 +39,10 @@ class Atom():
         self.basis_tran  = basis_tran
         self.amat     = amat
         self.point_group = point_group
+        self.space_group = int(space_group)
         self.vpm_type = vpm_type
         self.ncfgs    = None
+        self.totncfgs = None
 
     @staticmethod
     def from_incar(incar_file = 'atom2020.incar',cemat_file='atom2020.cemat.in',amat_file='atom2020.amat.in'):
@@ -56,6 +60,7 @@ class Atom():
             cfd       yes
             gqn       3 
             point_group C4v
+            space_group 71
             vpm_type    1
             -----
             #gqn:
@@ -107,6 +112,8 @@ class Atom():
                         gqn = np.int32(line1.split()[1])
                     elif line1[0:11] == "point_group" :
                         point_group = line1.split()[1]
+                    elif line1[0:11] == "space_group" :
+                        space_group = int(line1.split()[1])
                     elif line1[0:10] == "basis_tran" :
                         basis_tran = line1.split()[1]
                     elif line1[0:8] == "vpm_type" :
@@ -128,17 +135,38 @@ class Atom():
             except IOError:
                 print("File:" + "\"" +amat_file+ "\"" + " doesn't exist!")
         else : 
-            amat = None
+            amat = np.identity(norb,dtype=np.complex128) 
 
         if cfd == 'yes' :
             try : 
                 cfd_mat = read_2dc(norb,norb,cemat_file)
-                return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,basis_tran,amat,vpm_type)
+                cfd_mat = tran_op(cfd_mat,amat)
+                return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_type)
             except IOError:
                 print("File:" + "\"" +cemat_file+ "\"" + " doesn't exist!")
         else : 
             cfd_mat = None
-            return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,basis_tran,amat,vpm_type)
+            return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_type)
+   
+    def make_instance(self):
+        self.make_ncfgs()
+        self.check_incar()
+        self.make_soc()
+        self.make_totncfgs()
+        self.show_incar()
+
+    # this method will use the library of pylibwyl/wanntb
+    def make_soc(self):
+# soc in complex basis 
+        soc_c = atom_hsoc(self.soc_type,self.soc_val)
+# transformation matrix from complex basis to real basis(wannier90 orbitals order)
+        tmat  = tmat_c2r(self.soc_type,True)
+# soc in real orbitals(wannier90 orbitals order)
+        soc_r = tran_op(soc_c,tmat)
+# soc in real natural basis(gutzwiller), need input transfrom matrix 
+        soc_r_natural = tran_op(soc_r,self.amat)
+# assign attribute of instance 
+        self.soc_mat  = soc_r_natural
 
     def make_ncfgs(self):
         '''
@@ -158,7 +186,8 @@ class Atom():
         '''
         import math
         totncfgs = math.pow(2, self.norb)
-        return totncfgs
+        self.totncfgs = totncfgs
+#       return totncfgs
 
     def check_incar(self):
         """
@@ -202,6 +231,7 @@ class Atom():
         print('self.int_val:\n',    self.int_val)
         print('self.soc_type:\n',   self.soc_type)
         print('self.soc_val:\n',    self.soc_val)
+        print('self.soc_mat:\n',    self.soc_mat)
         print('self.cfd_mat:\n',    self.cfd_mat)
         print('self.point_group:\n',self.point_group)
         print('self.vpm_type:\n',   self.vpm_type)
