@@ -186,7 +186,7 @@ class Atom():
         '''
         import math
         totncfgs = math.pow(2, self.norb)
-        self.totncfgs = totncfgs
+        self.totncfgs = int(totncfgs)
 #       return totncfgs
 
     def check_incar(self):

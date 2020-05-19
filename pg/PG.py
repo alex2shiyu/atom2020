@@ -11,11 +11,75 @@ class Irrep:
     '''
     class of Irrep copied from yijiang's scripts
     '''
-    def __init__(self):
-        self.label = ''  # label for the representation. 'd' as postfix indicates double-valued irreps
-        self.dim = 1  # dimension of the representation
-        self.matrices = []  # representation matrices, ordered as the operations of the belonging group
+    def __init__(self,label='',dim=1):
+        self.label = label  # label for the representation. 'd' as postfix indicates double-valued irreps
+        self.dim   = dim  # dimension of the representation
+        self.matrices   = []  # representation matrices, ordered as the operations of the belonging group
         self.characters = []  # characters as a list, ordered the same as matrices
+
+    def cal_multi(self,rep):
+        '''
+        calculate the multiplicity of the irrep in the given rep.
+        rep:  should be a list of numpy.adarray which is the matrix representation of operators of PG 
+        '''
+        self.nrank = len(self.matrices) # the rank of the PG
+        assert isinstance(rep,list)
+        assert isinstance(rep[0],np.ndarray)
+        character_t = complex(0.0)
+        for iop in range(self.nrank):
+            character_t += np.conjugate(self.characters[iop])*np.trace(rep[iop]) 
+        multi_tmp = np.round(character_t.real/float(self.nrank))
+        if np.abs(multi_tmp - character_t.real/float(self.nrank)) < 1.0E-6 :
+            print("multi success!")
+            return int(multi_tmp)
+        else:
+            print('multi is not integer : ',multi_tmp)
+
+class ReductRep(Irrep):
+    def __init__(self,label='',dim=1):
+        super().__init__(label='',dim=1)
+        self.multi      = 0   # dictionary to contain various projectors for a certain Irrep
+        self.projector  = {}  # dictionary to contain various projectors for a certain Irrep
+    # multi should be assigned with the help of method of super class 
+   
+    def make_projector(self,op):
+        '''
+        aim : make projectors of every irreps for subspace of N operators 
+        op  : [list of numpy.ndarray] the matrix rep. of operators of PG
+        '''
+        assert isinstance(op,list)
+        assert isinstance(op[0],np.ndarray)
+        dim_op =op[0].shape[0] 
+# firstly make character projector
+        P_character = np.zeros((dim_op,dim_op),dtype=np.complex128)
+        for i in range(self.nrank):
+            P_character += self.dim/self.nrank * np.conjugate(self.characters[i])*op[i]
+        self.projector['Pcharacter'] = P_character
+# secondly make quasi projector
+        P_quasi = np.zeros((self.dim,dim_op,dim_op),dtype=np.complex128)
+        for i in range(self.dim):
+            for j in range(self.nrank):
+                P_quasi[i,:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i,i])*op[j]
+        self.projector['Pquasi'] = P_quasi
+# thirdly make normal projector
+        # first W_1p (p = 1, ..., self.dim)
+        for i in range(self.dim):
+            P_normal = np.zeros((dim_op,dim_op),dtype=np.complex128)
+            name = 'P' + str(0) + str(i)
+            for j in range(self.nrank):
+                P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][0,i])*op[j]
+            self.projector[name] = P_normal
+        # then W10, W21, ...
+        if self.dim > 1 :
+            for i in range(self.dim-1):
+                P_normal = np.zeros((dim_op,dim_op),dtype=np.complex128)
+                name = 'P' + str(i+1) + str(i)
+                for j in range(self.nrank):
+                    P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i+1,i])*op[j]
+                self.projector[name] = P_normal
+
+
+
 
 # double Point group
 class DPG():
@@ -111,43 +175,62 @@ class DPG():
                 self.rep_vec  = grp.rotcar
                 self.rep_spin = grp.su2s
                 self.irreps   = grp.irreps
-                print('dpg71.nrank:\n',self.nrank)
-                print('rotC:\n',grp.rotC)
-                print('dpg71.rep_vec:\n',self.rep_vec)
-                print('dpg71.rep_spin:\n',self.rep_spin)
-                for ir in self.irreps:
-                    print(ir.label,ir.characters.real)
+#               print('dpg71.nrank:\n',self.nrank)
+#               print('rotC:\n',grp.rotC)
+#               print('dpg71.rep_vec:\n',self.rep_vec)
+#               print('dpg71.rep_spin:\n',self.rep_spin)
+#               for ir in self.irreps:
+#                   print(ir.label,ir.characters.real)
 
 # many body point group
-class Mb_Pg():
+class MBPG():
     '''
     after get all the prerequisite, a class of essential information of point group need by atomic's problem is desired
     '''
-    def __init__(self, nop, op, irrep):
+    def __init__(self, nop, op):
         '''
         attributes:
             nop [I]       : rank of the point group
             op  [list]    : a list of numpy.ndarray which is the matrix rep. of operators in natural basis
-            irrep [list]  : a list of Irrep 
+#           irrep [list]  : a list of Irrep 
         '''
         self.nop = nop
         self.op  = op
-        self.irrep = []
-        for ir in irrep:
-            irr = Irrep()
-            irr.label = ir.label
-            irr.dim   = ir.dim
-            irr.matrices = ir.matrices
-            irr.characters = ir.characters
-            self.irrep.append(irr) 
-        print("check->irrep:\n",type(self.irrep[0])) 
-        if len(self.irrep) > 0 :
-            assert isinstance(self.irrep[0], Irrep)
+#       self.irrep = []
+#       for ir in irrep:
+#           irr = Irrep()
+#           irr.label = ir.label
+#           irr.dim   = ir.dim
+#           irr.matrices = ir.matrices
+#           irr.characters = ir.characters
+#           self.irrep.append(irr) 
+#       print("check->irrep:\n",type(self.irrep[0])) 
+#       if len(self.irrep) > 0 :
+#           assert isinstance(self.irrep[0], Irrep)
 
     def show_attribute(self):
         print('nop:',self.nop)
         print('operators:\n',self.op)
-        print('irreps:\n',self.irrep)
+#       print('irreps:\n',self.irrep)
+
+class MBPGsubs(MBPG): 
+    '''
+    every subspace of N will have their own information when do reduciton
+    '''
+    def __init__(self, nop, op):
+        super().__init__(nop, op)
+        self.irrep = []
+    
+    def Cal_ReductRep(self,irrep_input):
+        for ir in irrep_input:
+            irr = ReductRep()
+            irr.label = ir.label
+            irr.dim   = ir.dim
+            irr.matrices   = ir.matrices
+            irr.characters = ir.characters
+            irr.multi      = irr.cal_multi(self.op)
+            irr.projector  = irr.make_projector(self.op)
+            self.irrep.append(irr)
 
 
 class TranOrb():
@@ -382,18 +465,18 @@ class TranOrb():
                     vec_ifunc_ipoly = np.zeros(len(list(self.mapbasis.values())),np.float64)
                     poly_struct = self.func_o['struct'][ifunc,ipoly,:]
                     poly_coeff  = self.func_o['coeff'][ifunc,ipoly]
-                    print('ifunc=',ifunc,'ipoly=',ipoly)
-                    print('poly_struct:',poly_struct)
-                    print('poly_coeff:',poly_coeff)
-                    print('umat_tmp:\n',umat_tmp)
+#                   print('ifunc=',ifunc,'ipoly=',ipoly)
+#                   print('poly_struct:',poly_struct)
+#                   print('poly_coeff:',poly_coeff)
+#                   print('umat_tmp:\n',umat_tmp)
                     vec_ifunc_ipoly = self.tran_func(poly_struct,poly_coeff,umat_tmp)
-                    print('vec_ifunc_ipoly\n',vec_ifunc_ipoly)
+#                   print('vec_ifunc_ipoly\n',vec_ifunc_ipoly)
                     vec_ifunc += vec_ifunc_ipoly
-                    print(2*'-')
-                print(5*'-')
+#                   print(2*'-')
+#               print(5*'-')
                 # I will write a new function to decompose 
-                print('ifunc=',ifunc,'ipoly=',ipoly)
-                print('vec_ifunc\n',vec_ifunc)
+#               print('ifunc=',ifunc,'ipoly=',ipoly)
+#               print('vec_ifunc\n',vec_ifunc)
                 rep_new_tmp = decompose_vec(self.vec_oldbasis,vec_ifunc)
 #               the components arrange as rows
                 umat_new[ifunc,:] = rep_new_tmp

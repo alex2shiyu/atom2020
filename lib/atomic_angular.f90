@@ -1,65 +1,51 @@
 ! Operator transformation from single particle basis to many body basis
-  subroutine atomic_make_sp2np(norbs, ncfgs, totncfgs, basis, invsn, invcd, zmat_s, zmat_n)
+  subroutine atomic_make_sp2np(norbs, totncfgs, ncfgs, basis, invsn, invcd, zmat_s, zmat_n)
      implicit none
-
 ! number of orbits
      integer, intent(in) :: norbs
-
-! number of configurations
-     integer, intent(in) :: ncfgs
-
 ! number of total configurations of the whole shell
      integer, intent(in) :: totncfgs
-
+! number of configurations
+     integer, intent(in) :: ncfgs
 ! decimal represented basis
      integer, intent(in) :: basis(ncfgs)
-
 ! serial number of a decimal represented basis
      integer, intent(in) :: invsn(0:totncfgs-1)
-
 ! binary represented basis
      integer, intent(in) :: invcd(norbs, ncfgs)
-
 ! single particle operator in single particle basis
-     complex(8), intent(in) :: zmat_s(norbs, norbs)
-
+     complex(kind=8), intent(in) :: zmat_s(norbs, norbs)
 ! single particle operator in many particle basis
-     complex(8), intent(out) :: zmat_n(ncfgs, ncfgs)
-
+     complex(kind=8), intent(out) :: zmat_n(ncfgs, ncfgs)
 ! local variables
 ! loop index over orbits
      integer :: iorb
      integer :: alpha
      integer :: betta
-
 ! loop index over configurations
      integer :: ibas
      integer :: jbas
-
 ! sign change due to anti-commute relation
      integer :: isgn
-
 ! auxiliary integer variables
      integer :: jold, jnew
      integer :: code(norbs)
-
 ! auxiliary real(dp) variables
-     real(8) :: dsgn
+     real(kind=8) :: dsgn
 
 !f2py   intent(in)     norbs
-!f2py   intent(in)     ncfgs
 !f2py   intent(in)     totncfgs
+!f2py   intent(in)     ncfgs
 !f2py   intent(in)     basis
 !f2py   intent(in)     invsn
 !f2py   intent(in)     invcd
 !f2py   intent(in)     zmat_s
 !f2py   intent(out)    zmat_n
 !f2py   depend(ncfgs)  basis
-!f2py   depend(totcfgs)  invsn
+!f2py   depend(totncfgs)  invsn
 !f2py   depend(norbs,ncfgs)  invcd
 !f2py   depend(norbs)  zmat_s
 !f2py   depend(ncfgs)  zmat_n
-
 
 ! initialize zmat_n to be zero
      zmat_n = dcmplx(0.0d0, 0.0d0)

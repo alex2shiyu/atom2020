@@ -5,6 +5,12 @@ import pickle as pk
 import os
 import sys
 
+def RepBasisNorm(basis):
+    '''
+    normalize a basis for a certain rep which is actually a normalization of a vector
+    '''
+    return basis/np.linalg.norm(basis)
+
 def get_TranOrb_param(orb_case):
     if orb_case == 'f' :
         npoly1=np.array([3,3,3,2,1,2,2],dtype=np.int32)
