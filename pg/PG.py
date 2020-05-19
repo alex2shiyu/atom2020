@@ -40,8 +40,31 @@ class ReductRep(Irrep):
         super().__init__(label='',dim=1)
         self.multi      = 0   # dictionary to contain various projectors for a certain Irrep
         self.projector  = {}  # dictionary to contain various projectors for a certain Irrep
+        self.basis      = {}  # a dict of different set of basis for different <multi>, each set contain
+                              # a list of basis whose number is the dimension of the irrep. For example
+                              # self.multi = 2, self.dim = 3 , then the self.basis = dict{'multi1'=[np.array([.1D.the
+                              # first basis.]),[..the second one.],[...the third one ...]],
+                              # 'multi2'=[np.array([...1D..the first..]),np.array([...the second...]),np.array([...the
+                              # third...])]} 
     # multi should be assigned with the help of method of super class 
-   
+    def reduction(self,op):
+        '''
+        will reduce the reducible representation op
+        input : 
+            op [list]: is a list of numpy.ndarray which is the representation matrix of every operators of the PG
+            <self.projector and self.multi refers to information about "this irrep" and "this input op">
+        '''
+        for imul in range(self.multi):
+            pass
+
+    def make_phi1(self,multi_now):
+        '''
+        according to intro. in Alttman's point group tables,
+        W^i_11 \phi = \phi^i_1 
+        however, if self.multi > 1,
+        '''
+        
+
     def make_projector(self,op):
         '''
         aim : make projectors of every irreps for subspace of N operators 
@@ -222,6 +245,9 @@ class MBPGsubs(MBPG):
         self.irrep = []
     
     def Cal_ReductRep(self,irrep_input):
+        '''
+        traverse every possible irreps of the PG to calculate multiplicities and corresponding projectors
+        '''
         for ir in irrep_input:
             irr = ReductRep()
             irr.label = ir.label
