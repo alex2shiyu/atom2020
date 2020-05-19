@@ -9,7 +9,28 @@ def RepBasisNorm(basis):
     '''
     normalize a basis for a certain rep which is actually a normalization of a vector
     '''
-    return basis/np.linalg.norm(basis)
+    if isinstance(basis,np.ndarray):
+        return basis/np.linalg.norm(basis)
+    elif isinstance(basis,list):
+        tmp_list = []
+        for iba in basis:
+            tmp_list.append(iba/np.linalg.norm(iba))
+        return tmp_list
+    else:
+        raise ValueError("RepBasisNorm just support <list of numpy.ndarray> and <numpy.ndarray> not yet this type: ",type(basis))
+
+def isOrthogonal(basis,basis_set):
+    '''
+    to judge whether the function <basis> is orthogonal to the other basis set
+    input : 
+        basis : 1D numpy-ndarray
+        basis_set : list of 1D numpy-ndarray
+    '''
+    isOrtho = True
+    for ir in basis_set:
+        if np.dot(basis,ir) > 1.0E-6:
+            isOrtho = False
+    return isOrtho
 
 def get_TranOrb_param(orb_case):
     if orb_case == 'f' :

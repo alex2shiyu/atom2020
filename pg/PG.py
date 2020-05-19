@@ -61,8 +61,11 @@ class ReductRep(Irrep):
         '''
         according to intro. in Alttman's point group tables,
         W^i_11 \phi = \phi^i_1 
-        however, if self.multi > 1,
+        however, if self.multi > 1, when make_phi1 for multi_now > 1, you should make sure the 
+        \phi^i_1 is orthogonal to the previous set of bases
         '''
+        
+
         
 
     def make_projector(self,op):
