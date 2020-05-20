@@ -285,8 +285,12 @@
       do i = flag+1 , 2**num_orb-1
           call verif( i, num_orb, n )
           if (n .eq. occ_num)then
-              code = invcd(:,invsn(i))
-              exit
+              if (i .eq. basis(invsn(flag)+1))then
+                  code = invcd(:,invsn(i))
+                  exit
+              else
+                  stop "error in code_shift3 in gw_make_newui"
+              endif
           endif
       enddo
       return

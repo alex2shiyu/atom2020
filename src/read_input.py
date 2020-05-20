@@ -4,6 +4,7 @@ import numpy as np
 from module.mod_read import read_2dc
 from wanntb.soc import atom_hsoc
 from wanntb.tran import tran_op, tmat_c2r
+from scipy.special import perm
 
 class Atom():
     """
@@ -154,6 +155,15 @@ class Atom():
         self.make_soc()
         self.make_totncfgs()
         self.show_incar()
+
+#   def make_unitary_lenth(self):
+#       '''
+#       aim: there is function(gw_make_newui in gw_make_new.f90 file) warpered using fortran to get the unitary transformation matrix in given many body space in
+#       the case we know their transformation matrix in single particle orbitals, the algorithm is very simple thus one
+#       type of the array (1D or 2D) is huge and the dimension depends on the cutoff space of Fock space. This function
+#       is to calculate the upper bound of the dimension using self.nmin, self.nmax, self.norb
+#       '''
+#       return perm(10, 3, exact=True)
 
     # this method will use the library of pylibwyl/wanntb
     def make_soc(self):

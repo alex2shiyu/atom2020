@@ -5,7 +5,7 @@ from module.mod_dump import dump_4dc, dump_2dc
 from module.mod_read import read_4dc
 from module.atomic_hmat import atomic_make_hmtrx#(norbs, totncfgs, ncfgs, state, invcd, invsn, eimp, umat, hmat)
 from src.atomic_subs   import atomic_state  
-from scipy.special import comb
+from scipy.special import comb,perm
 from module.atomic_basis import atomic_make_basis#(norbs,totncfgs,ncfgs,ntots,nmin,nmax,nstat)
 from pg.PG import DPG, TranOrb, MBPG, MBPGsubs
 from pg.PG_util import Point_ID,pmutt,decompose_vec,get_TranOrb_param
@@ -57,31 +57,36 @@ Oprt_PG = TranOrb(dpg71.rep_vec,dpg71.rep_spin,npoly1,dim=dim1,npower=npower1,nf
 # <transform MRO into natural basis(MRN)>
 print('umat_so_original:',Oprt_PG.umat_so)
 umat_so_natural = tran_op(Oprt_PG.umat_so, atom1.amat) 
-manybody_umat   = []
-for imat in umat_so_natural:
-#for imat in Oprt_PG.umat_so:
-#   umat_mb_tmp = atomic_make_sp2np(atom1.norb, atom1.totncfgs, atom1.ncfgs, basis, invsn, invcd, imat)
-    umat_mb_tmp = gw_make_newui(atom1.norb,atom1.ncfgs,atom1.totncfgs,atom1.nmin,atom1.nmax,imat,basis,invcd,invsn,1.0E-8)
-    manybody_umat.append(umat_mb_tmp)
-# construct instance of Mb_Pg
-pg_manybody = MBPG(len(manybody_umat),manybody_umat)
-##pg_manybody.show_attribute()
 
 # construct projectors 
 sta = int(0)
 for inn in range(atom1.nmin,atom1.nmax+1):
-    # _sp means <sub space>
     len_sp   = int(comb(atom1.norb,inn))
-    print('sta: ',sta,'len: ',len_sp)
+    basis1,invcd1,invsn1 = atomic_make_basis(atom1.norb,atom1.totncfgs,len_sp,atom1.norb,inn,inn,nstat)
+    manybody_umat   = []
+    unitary_len = perm(atom1.norb, inn, exact=True)
+    for imat in umat_so_natural:
+#for imat in Oprt_PG.umat_so:
+#   umat_mb_tmp = atomic_make_sp2np(atom1.norb, atom1.totncfgs, atom1.ncfgs, basis, invsn, invcd, imat)
+        umat_mb_tmp = gw_make_newui(atom1.norb,len_sp,atom1.totncfgs,unitary_len,inn,inn,imat,basis1,invcd1,invsn1,1.0E-8)
+        manybody_umat.append(umat_mb_tmp)
+# construct instance of Mb_Pg
+#   pg_manybody = MBPG(len(manybody_umat),manybody_umat)
+##pg_manybody.show_attribute()
+    # _sp means <sub space>
+#   print('sta: ',sta,'len: ',len_sp)
     umat_sp  = []
-    for iop in range(pg_manybody.nop):
-        umat_tmp = pg_manybody.op[iop][sta:sta+len_sp,sta:sta+len_sp]
+#   for iop in range(pg_manybody.nop):
+    for iop in range(len(manybody_umat)):
+#       umat_tmp = pg_manybody.op[iop][sta:sta+len_sp,sta:sta+len_sp]
+        umat_tmp = manybody_umat[iop]
 #       filename = 'test_opmatrx_'+str(iop+1)+'.dat'
 #       dump_2dc(umat_tmp.shape[0],umat_tmp.shape[1],umat_tmp,filename)
 #       print('umat.shape  :',umat_tmp.shape)
 #       print('trace <',iop+1,'>  :',np.trace(umat_tmp))
         umat_sp.append(umat_tmp)
-    pg_mb_sp = MBPGsubs(pg_manybody.nop,umat_sp)
+#   pg_mb_sp = MBPGsubs(pg_manybody.nop,umat_sp)
+    pg_mb_sp = MBPGsubs(len(umat_sp),umat_sp)
     pg_mb_sp.Cal_ReductRep(dpg71.irreps)
     for irr in pg_mb_sp.irrep:
         print('characters:\n',irr.characters.real)
