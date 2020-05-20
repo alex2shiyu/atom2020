@@ -4,6 +4,7 @@ import numpy as np
 import pickle as pk
 import os
 import sys
+import copy
 
 def RepBasisNorm(basis):
     '''
@@ -19,18 +20,72 @@ def RepBasisNorm(basis):
     else:
         raise ValueError("RepBasisNorm just support <list of numpy.ndarray> and <numpy.ndarray> not yet this type: ",type(basis))
 
+
+def isindependent(basis,basis_set):
+    '''
+    to judge whether the function <basis> is independent to the other basis set
+    input : 
+        basis : 1D numpy-ndarray
+        basis_set : list of 1D numpy-ndarray or just numpy-ndarray
+    '''
+    if isinstance(basis_set, list):
+        isOrtho = True
+        print("")
+        param_tmp = np.zeros(len(basis_set),dtype=np.complex128)
+        basis_t   = copy.deepcopy(basis)
+        for ir in range(len(basis_set)):
+            param_tmp[ir] = np.dot(np.conjugate(basis_set[ir]),basis)
+            basis_t = basis_t - param_tmp[ir] * basis_set[ir]
+        if np.sum(np.abs(basis_t)) < 1.0E-2 : 
+            isOrtho = False
+            print('    Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
+        else :
+            print('Not Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
+        return [isOrtho]
+    elif isinstance(basis_set,np.ndarray):
+        isOrtho = True
+        basis_t   = copy.deepcopy(basis)
+        param_tmp = np.dot(np.conjugate(basis_set),basis)
+        basis_t   = basis_t - param_tmp * basis_set
+        if np.sum(np.abs(basis_t)) < 1.0E-2 : 
+            isOrtho = False
+            print('    Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
+        else :
+            print('Not Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
+        return [isOrtho]
+    else:
+        raise ValueError("Just support list of numpy-1Darray or numpy-1Darray not yet :",type(basis_set))
+
 def isOrthogonal(basis,basis_set):
     '''
     to judge whether the function <basis> is orthogonal to the other basis set
     input : 
         basis : 1D numpy-ndarray
-        basis_set : list of 1D numpy-ndarray
+        basis_set : list of 1D numpy-ndarray or just numpy-ndarray
     '''
-    isOrtho = True
-    for ir in basis_set:
-        if np.dot(basis,ir) > 1.0E-6:
+    if isinstance(basis_set, list):
+        isOrtho = [True for i in range(len(basis_set))]
+        print("")
+        for ir in range(len(basis_set)):
+            if np.abs(np.dot(np.conjugate(basis),basis_set[ir])) > 1.0E-3:
+                print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set[ir])))
+                isOrtho[ir] = False
+            else :
+#           print('wave1:\n',basis)
+#           print('wave2:\n',basis_set)
+                print('Not sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set[ir])))
+        return isOrtho
+    elif isinstance(basis_set,np.ndarray):
+        isOrtho = True
+        if np.abs(np.dot(np.conjugate(basis),basis_set)) > 1.0E-3:
+            print('Sad : ',np.abs(np.dot(np.conjugate(basis),basis_set)))
             isOrtho = False
-    return isOrtho
+        print('wave1:\n',basis)
+        print('wave2:\n',basis_set)
+        print('isOrtho value:',np.abs(np.dot(np.conjugate(basis),basis_set)))
+        return isOrtho
+    else:
+        raise ValueError("Just support list of numpy-1Darray or numpy-1Darray not yet :",type(basis_set))
 
 def get_TranOrb_param(orb_case):
     if orb_case == 'f' :

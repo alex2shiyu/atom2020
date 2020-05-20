@@ -1,10 +1,11 @@
 !>>>>author:sypeng@iphy.ac.cn
-      subroutine gw_make_newui(num_orb,num_config,totncfgs,occ1,occ2,UNmtrxp00,basis,invcd,invsn,prec,UImtrxp00)
+      subroutine gw_make_newui(num_orb,num_config,totncfgs,unitary_len,occ1,occ2,UNmtrxp00,basis,invcd,invsn,prec,UImtrxp00)
       implicit none
 !     integer, external :: state_pick
       integer,      intent(in)   :: num_orb
       integer,      intent(in)   :: num_config
       integer,      intent(in)   :: totncfgs
+      integer,      intent(in)   :: unitary_len
       integer,      intent(in)   :: occ1
       integer,      intent(in)   :: occ2
       integer,      intent(in)   :: basis(num_config)
@@ -17,14 +18,15 @@
       integer:: i,j,n,m,num1,num,ii,jj,occt,int_tmp
       integer:: offset_n,offset_m,flag1,flag2,occ_n,cnt_flag,sgn1,n_fk,flag3(num_orb)
       integer:: code_a(Num_orb),code_old(Num_orb),code_new(Num_orb)
-      integer:: code_last(6000,Num_orb),code_tmp(Num_orb)
+      integer:: code_last(unitary_len,Num_orb),code_tmp(Num_orb)
       integer:: long1(Num_orb,Num_orb),lgth(num_orb)
-      complex(8):: value_last(6000),v_tmp
+      complex(8):: value_last(unitary_len),v_tmp
       real(kind=8) :: prec_
 
 !f2py intent(in) num_orb
 !f2py intent(in) num_config
 !f2py intent(in) totncfgs
+!f2py intent(in) unitary_len
 !f2py intent(in) occ1
 !f2py intent(in) occ2
 !f2py intent(in) basis
@@ -58,6 +60,7 @@
       offset_m=0
 !      
       do occ_n=occ1,occ2
+         print *,'======================================'
          occt=occ_n
          call state_pick(occ_n,num_orb,int_tmp)
 !        num=state_pick(occ_n,num_orb)
@@ -94,24 +97,28 @@
                 end if
 		        lgth(flag1)=flag2
             end do!end every single wavefunction
-            if(occt .eq. 7 .and. i .eq. num)then 
+!!          if(occt .eq. 7 .and. i .eq. num)then 
 !!              write(20,*)'long1',long1
-                do ii = 1, num_orb
-                    do jj = 1, num_orb
+!!              do ii = 1, num_orb
+!!                  do jj = 1, num_orb
 !!                      write(22,'(3I4,2x)')jj,ii,long1(jj,ii)
-                    enddo
-                enddo
+!!                  enddo
+!!              enddo
 !!              write(15,*)'lgth',lgth
-            endif
+!!          endif
 !           call code_tranp(occ,num_orb,long,lgth,code_last)
-            call code_tranp(occt,occt,num_orb,long1,lgth,cnt_flag,code_last)
+            print *, '-------------------'
+            print *,'nmin-nmax:',occ_n,'ncfgs:',i
+            call code_tranp(occt,occt,num_orb,unitary_len,long1,lgth,cnt_flag,code_last)
+            print *, ''
+            print *, ''
 !	        print *,"-----------test5-below-code-tranp--------------"
-            if(occt .eq. 7 .and. i .eq. num)then 
+!!          if(occt .eq. 7 .and. i .eq. num)then 
 !!              write(31,*)'cnt_flag',cnt_flag
-                do ii = 1, cnt_flag
+!!              do ii = 1, cnt_flag
 !!                   write(32,'(14I2)')code_last(ii,:)
-                enddo
-            endif
+!!              enddo
+!!          endif
 !!
             do ii=1,cnt_flag
                 code_tmp=0
@@ -144,21 +151,22 @@
       end if
       end subroutine gw_make_newui
 !
-      recursive subroutine code_tranp(occ,n,num_orb,long,lgth,cnt_flag,code_last)
+      recursive subroutine code_tranp(occ,n,num_orb,unitary_len,long,lgth,cnt_flag,code_last)
 !         
       implicit none
       integer,   intent(in)    ::  occ
       integer,   intent(in)    ::  n
       integer,   intent(in)    ::  num_orb
+      integer,   intent(in)    ::  unitary_len
       integer,   intent(in)    ::  long(num_orb,num_orb)
       integer,   intent(in)    ::  lgth(num_orb)
       integer,   intent(out)   ::  cnt_flag
-      integer,   intent(out)   ::  code_last(6000,num_orb)
+      integer,   intent(out)   ::  code_last(unitary_len,num_orb)
 
       integer:: i,j,m,num,ii,jj
       integer:: offset_n,offset_m,flg1,flg2,occ_n
       integer:: code1_tmp(Num_orb),code_old(Num_orb)
-      integer:: code_tmp(6000,Num_orb)
+      integer:: code_tmp(unitary_len,Num_orb)
 
 !      real*8:: U_mtrx(num_orb,num_orb,num_orb,num_orb)
 !      complex(dp):: Elm_mtrx1(num_orb,num_orb)
@@ -211,7 +219,8 @@
 	      code_last=code_tmp
 	      cnt_flag=flg2
       end if 
-      call code_tranp(occ,n-1,num_orb,long,lgth,cnt_flag,code_last)
+      print *, 'ORBth = ',n,'cnt_flag=',cnt_flag
+      call code_tranp(occ,n-1,num_orb,unitary_len,long,lgth,cnt_flag,code_last)
       end subroutine code_tranp
 
 

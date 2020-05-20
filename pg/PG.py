@@ -4,12 +4,12 @@ import numpy as np
 import pickle as pk
 import os
 import sys
-from pg.PG_util import pmutt, decompose_vec
+from pg.PG_util import pmutt, decompose_vec, RepBasisNorm, isOrthogonal, isindependent
 from pg.read_IR_DSG import loadIR 
 
 class Irrep:
     '''
-    class of Irrep copied from yijiang's scripts
+    Irreps class 
     '''
     def __init__(self,label='',dim=1):
         self.label = label  # label for the representation. 'd' as postfix indicates double-valued irreps
@@ -33,7 +33,7 @@ class Irrep:
             print("multi success!")
             return int(multi_tmp)
         else:
-            print('multi is not integer : ',multi_tmp)
+            print('multi is not integer : ',multi_tmp,character_t.real/float(self.nrank),np.abs(multi_tmp - character_t.real/float(self.nrank)))
 
 class ReductRep(Irrep):
     def __init__(self,label='',dim=1):
@@ -42,9 +42,9 @@ class ReductRep(Irrep):
         self.projector  = {}  # dictionary to contain various projectors for a certain Irrep
         self.basis      = {}  # a dict of different set of basis for different <multi>, each set contain
                               # a list of basis whose number is the dimension of the irrep. For example
-                              # self.multi = 2, self.dim = 3 , then the self.basis = dict{'multi1'=[np.array([.1D.the
+                              # self.multi = 2, self.dim = 3 , then the self.basis = dict{'multi0'=[np.array([.1D.the
                               # first basis.]),[..the second one.],[...the third one ...]],
-                              # 'multi2'=[np.array([...1D..the first..]),np.array([...the second...]),np.array([...the
+                              # 'multi1'=[np.array([...1D..the first..]),np.array([...the second...]),np.array([...the
                               # third...])]} 
     # multi should be assigned with the help of method of super class 
     def reduction(self,op):
@@ -55,16 +55,102 @@ class ReductRep(Irrep):
             <self.projector and self.multi refers to information about "this irrep" and "this input op">
         '''
         for imul in range(self.multi):
-            pass
+            name_key = 'multi'+str(imul)
+            print('')
+            print('')
+            print(20*'=')
+            print('* * imul :',imul+1)
+            phi_t1 = self.make_phi1(imul,op[0].shape[0])
+            print('norm(phi1) of multi',imul,'of ',self.label,'is :',np.linalg.norm(phi_t1))
+            basis_list = []
+            basis_list += phi_t1
+            if self.dim > 1 :
+                phi_other = self.make_phi_other(phi_t1[0],imul)
+                basis_list += phi_other
+            print('basis set for multi',imul,'of ',self.label,'is\n',basis_list)
+            self.basis[name_key] = basis_list
+                
 
-    def make_phi1(self,multi_now):
+
+
+    def make_phi1(self,multi_now,ndim):
         '''
         according to intro. in Alttman's point group tables,
         W^i_11 \phi = \phi^i_1 
         however, if self.multi > 1, when make_phi1 for multi_now > 1, you should make sure the 
         \phi^i_1 is orthogonal to the previous set of bases
+        input : 
+                multi_now : Integer <counts from 0>
+                ndim :      dimension of the subspace which is also the dimension of op matrix
+                            I will traverse the basis of the space like 
+                            [1,0,0,0, ...]
+                            [0,1,0,0, ...]
+                            [0,0,1,0, ...]
+                            until the useful \phi^i_1 has been found
+        output: func_1 [list of a <1D-numpy.ndarray>] 
         '''
+        for i in range(ndim):
+            print("")
+            print(10*'*')
+            print(2*'* ','i :',i+1)
+            func_all    = np.zeros(ndim,dtype=np.complex128)
+            func_all[i] = complex(1.0)
+#           func_1_list   = []
+            for ip in range(self.dim):
+                print("")
+                print('. . . . . . . . . ')
+                print('i(P_i+1_i)=',ip+1,'|')
+                print('. . . . . . . . . ')
+                name_ip = 'P' + str(0) + str(ip)
+                Proj    = self.projector[name_ip]
+                func_1  = np.dot(Proj,func_all)
+#               func_1_list.append(func_1)
+                if np.sum(np.abs(func_1)) > 1.0E-8 :
+                    func_1 = RepBasisNorm(func_1) 
+                    if int(multi_now) > 0 :
+                        isOrtho_all = []
+                        for imul in range(multi_now):
+                            mul_name  = 'multi' + str(imul)
+                            basis_set = self.basis[mul_name]
+#                           print('func1=\n',func_1)
+#                           print('basis_set=\n',basis_set)
+#                           isOrtho   = isOrthogonal(func_1,basis_set) 
+                            isOrtho   = isindependent(func_1,basis_set) 
+                            isOrtho_all += isOrtho
+                        print('? is orthogonal to pervious set: ',isOrtho_all)
+                        print('\n\n')
+                        if all(isOrtho_all) == True :
+                            print('the proper phi for phi1 of mulit=',multi_now,'of irreps ',self.label,'is',i+1)
+                            return [func_1]
+                        elif i == ndim-1  and ip == self.dim-1 :
+                            raise ValueError("Can not find proper phi_1 orthogonal to previous basis \
+                                    set:",multi_now,isOrtho_all)
+                    else:
+                        return [func_1]
+                elif i == ndim-1 and ip == self.dim-1 :
+                    raise ValueError("Can not find phi_1 with finite elements  in <make_phi1>")
+                else :
+                    print('Warning : norm of phi_1 is too small ...')
         
+    def make_phi_other(self,phi_1,multi_now):
+        '''
+        aim : once there is phi_1, produce the other basis using projectors W^i_10, W^i_21, ... when the dimension
+              of the irrepresentation is larger than 1
+        input : 
+                phi_1 : 1D-numpy.ndarray
+                multi_now : Integer <counts from 0>
+        output
+                phi_other : list of     
+        '''
+        basis_other = []
+        for i in range(self.dim-1):
+            name_proj = 'P' + str(i+1) + str(i)
+            proj      = self.projector[name_proj]
+            basis_t   = np.dot(proj,phi_1)
+            print('norm(phi',str(i+1)+str(i),') of multi',multi_now,'of ',self.label,'is :',np.linalg.norm(basis_t))
+            basis_other.append(basis_t)
+        
+        return basis_other
 
         
 
@@ -258,7 +344,8 @@ class MBPGsubs(MBPG):
             irr.matrices   = ir.matrices
             irr.characters = ir.characters
             irr.multi      = irr.cal_multi(self.op)
-            irr.projector  = irr.make_projector(self.op)
+            irr.make_projector(self.op)
+            irr.reduction(self.op)
             self.irrep.append(irr)
 
 

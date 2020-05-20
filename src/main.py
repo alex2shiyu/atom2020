@@ -61,7 +61,7 @@ manybody_umat   = []
 for imat in umat_so_natural:
 #for imat in Oprt_PG.umat_so:
 #   umat_mb_tmp = atomic_make_sp2np(atom1.norb, atom1.totncfgs, atom1.ncfgs, basis, invsn, invcd, imat)
-    umat_mb_tmp = gw_make_newui(atom1.norb,atom1.ncfgs,atom1.totncfgs,atom1.nmin,atom1.nmax,imat,basis,invcd,invsn,5.0E-6)
+    umat_mb_tmp = gw_make_newui(atom1.norb,atom1.ncfgs,atom1.totncfgs,atom1.nmin,atom1.nmax,imat,basis,invcd,invsn,1.0E-8)
     manybody_umat.append(umat_mb_tmp)
 # construct instance of Mb_Pg
 pg_manybody = MBPG(len(manybody_umat),manybody_umat)
