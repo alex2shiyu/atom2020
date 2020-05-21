@@ -35,7 +35,7 @@ def isindependent(basis,basis_set):
         for ir in range(len(basis_set)):
             param_tmp[ir] = np.dot(np.conjugate(basis_set[ir]),basis)
             basis_t = basis_t - param_tmp[ir] * basis_set[ir]
-        if np.sum(np.abs(basis_t)) < 1.0E-2 : 
+        if np.sum(np.abs(basis_t)) < 0.1 : 
             isOrtho = False
             print('         Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
         else :
@@ -47,7 +47,7 @@ def isindependent(basis,basis_set):
         basis_t   = copy.deepcopy(basis)
         param_tmp = np.dot(np.conjugate(basis_set),basis)
         basis_t   = basis_t - param_tmp * basis_set
-        if np.sum(np.abs(basis_t)) < 1.0E-2 : 
+        if np.sum(np.abs(basis_t)) < 1.0 : 
             isOrtho = False
             print('    Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
         else :
@@ -63,11 +63,11 @@ def isOrthogonal(basis,basis_set):
         basis : 1D numpy-ndarray
         basis_set : list of 1D numpy-ndarray or just numpy-ndarray
     '''
-    if isinstance(basis_set, list):
+    if isinstance(basis, np.ndarray) and isinstance(basis_set, list):
         isOrtho = [True for i in range(len(basis_set))]
         print("")
         for ir in range(len(basis_set)):
-            if np.abs(np.dot(np.conjugate(basis),basis_set[ir])) > 1.0E-3:
+            if np.abs(np.dot(np.conjugate(basis),basis_set[ir])) > 1.0E-4:
                 print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set[ir])))
                 isOrtho[ir] = False
             else :
@@ -75,14 +75,41 @@ def isOrthogonal(basis,basis_set):
 #           print('wave2:\n',basis_set)
                 print('Not sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set[ir])))
         return isOrtho
-    elif isinstance(basis_set,np.ndarray):
+    elif isinstance(basis, np.ndarray) and isinstance(basis_set,np.ndarray):
         isOrtho = True
-        if np.abs(np.dot(np.conjugate(basis),basis_set)) > 1.0E-3:
-            print('Sad : ',np.abs(np.dot(np.conjugate(basis),basis_set)))
+        if np.abs(np.dot(np.conjugate(basis),basis_set)) > 1.0E-4:
+            print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set)))
             isOrtho = False
+        else:
+            print('Not sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set)))
         print('wave1:\n',basis)
         print('wave2:\n',basis_set)
         print('isOrtho value:',np.abs(np.dot(np.conjugate(basis),basis_set)))
+        return isOrtho
+    elif isinstance(basis,list) and isinstance(basis_set,list):
+        isOrtho = True
+        for ir1 in basis:
+            for ir2 in basis_set:
+                if np.array_equal(ir1,ir2):
+                    print('-----> equal')
+                    continue 
+                elif np.abs(np.dot(np.conjugate(ir1),ir2)) > 1.0E-4:
+                    print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),ir2)))
+                    isOrtho = False
+                else:
+                    print('Not sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),ir2)))
+        return isOrtho
+    elif isinstance(basis,list) and isinstance(basis_set,np.ndarray):
+        isOrtho = True
+        for ir1 in basis:
+            if np.array_equal(ir1,basis_set):
+                print('-----> equal')
+                continue 
+            elif np.abs(np.dot(np.conjugate(ir1),basis_set)) > 1.0E-4:
+                print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),basis_set)))
+                isOrtho = False
+            else:
+                print('Not sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),basis_set)))
         return isOrtho
     else:
         raise ValueError("Just support list of numpy-1Darray or numpy-1Darray not yet :",type(basis_set))

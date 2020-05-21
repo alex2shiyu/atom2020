@@ -56,7 +56,7 @@ Oprt_PG = TranOrb(dpg71.rep_vec,dpg71.rep_spin,npoly1,dim=dim1,npower=npower1,nf
 
 # <transform MRO into natural basis(MRN)>
 ##print('umat_so_original:',Oprt_PG.umat_so)
-umat_so_natural = tran_op(Oprt_PG.umat_so, atom1.amat) 
+umat_so_natural = tran_op(Oprt_PG.umat_so, atom1.amat) #umat_so_natrual  transforms in rows
 #umat_so_natural = tran_unitary(Oprt_PG.umat_so,atom1.amat,transpose=True) 
 
 # construct projectors 
@@ -76,8 +76,10 @@ for inn in range(atom1.nmin,atom1.nmax+1):
         print('* nop = ',cnt_op)
 #for imat in Oprt_PG.umat_so:
 #   umat_mb_tmp = atomic_make_sp2np(atom1.norb, atom1.totncfgs, atom1.ncfgs, basis, invsn, invcd, imat)
+# the input unitary matrix of gw_make_newui should be transformed in rows
         umat_mb_tmp = gw_make_newui(atom1.norb,len_sp,atom1.totncfgs,unitary_len,inn,inn,imat,basis1,invcd1,invsn1,1.0E-8)
-        manybody_umat.append(umat_mb_tmp)
+# the manybody's unitary transform matrix should transfrom in columns like that in group theory
+        manybody_umat.append(np.transpose(umat_mb_tmp)) # 
 # construct instance of Mb_Pg
 #   pg_manybody = MBPG(len(manybody_umat),manybody_umat)
 ##pg_manybody.show_attribute()
@@ -96,6 +98,7 @@ for inn in range(atom1.nmin,atom1.nmax+1):
 #   pg_mb_sp = MBPGsubs(pg_manybody.nop,umat_sp)
     pg_mb_sp = MBPGsubs(len(umat_sp),umat_sp)
     pg_mb_sp.Cal_ReductRep(dpg71.irreps)
+    pg_mb_sp.check_projectors()
     for irr in pg_mb_sp.irrep:
         print('characters:\n',irr.characters.real)
         print('multi for ',irr.label,'is ',irr.multi)

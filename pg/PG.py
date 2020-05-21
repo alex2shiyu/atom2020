@@ -104,7 +104,8 @@ class ReductRep(Irrep):
             func_all    = np.zeros(ndim,dtype=np.complex128)
             func_all[i] = complex(1.0)
 #           func_1_list   = []
-            for ip in range(self.dim):
+#           for ip in range(self.dim):
+            for ip in range(1):
                 print("")
                 print('. . . . . . . . . ')
                 print('i(P_i+1_i)=',ip+1,'|')
@@ -113,47 +114,47 @@ class ReductRep(Irrep):
                 Proj    = self.projector[name_ip]
                 func_1  = np.dot(Proj,func_all)
 #               func_1_list.append(func_1)
-                if np.sum(np.abs(func_1)) > 1.0E-8 :
+                if np.sum(np.abs(func_1)) > 1.0E-5 :
                     func_1 = RepBasisNorm(func_1) 
-                    isOrtho_all = []
+                    isindependt_all = []
                     print(5*'- ')
-                    print('   check orthogonality ...')
+                    print('   check independence ...')
                     if int(multi_now) > 0 or len(irrep_prev) > 0 :
                         print('multi_now(from 0) =',multi_now,'/',self.multi,'  ','num of irrep_prev :',len(irrep_prev))
                         print(5*'- ')
                         if int(multi_now) > 0 :
                             print('')
                             for imul in range(multi_now):
-                                print('   Ortho:  multi(from 0)=',imul,'multi(now)=',multi_now)
+                                print('   independent:  multi(from 0)=',imul,'multi(now)=',multi_now)
                                 mul_name  = 'multi' + str(imul)
                                 basis_set = self.basis[mul_name]
 #                               print('func1=\n',func_1)
 #                               print('basis_set=\n',basis_set)
 #                               isOrtho   = isOrthogonal(func_1,basis_set) 
-                                isOrtho   = isindependent(func_1,basis_set) 
-                                isOrtho_all += isOrtho
+                                independt   = isindependent(func_1,basis_set) 
+                                isindependt_all += independt
                         if len(irrep_prev) > 0 :
                             for irr in irrep_prev :
                                 if irr.multi > 0:
                                     for imul in range(irr.multi):
-                                        print('   Ortho:  multi(from 0)=',imul,'/',irr.multi)
+                                        print('   independent:  multi(from 0)=',imul,'/',irr.multi)
                                         mul_name = 'multi' + str(imul)
                                         basis_set = irr.basis[mul_name]
-                                        isOrtho   = isindependent(func_1,basis_set) 
-                                        isOrtho_all += isOrtho
+                                        independt   = isindependent(func_1,basis_set) 
+                                        isindependt_all += independt
                     else:
                         return [func_1]
                     #
-                    print('   ??? is orthogonal to pervious set: \n','   ',isOrtho_all)
+                    print('   ??? is orthogonal to pervious set: \n','   ',isindependt_all)
                     print('\n')
-                    if all(isOrtho_all) == True :
+                    if all(isindependt_all) == True :
                         print(10*'*-')
                         print('* the proper phi for phi1 of mulit=',multi_now,'of irreps ',self.label,'is',i+1)
                         print(10*'*-')
                         return [func_1]
                     elif i == ndim-1  and ip == self.dim-1 :
                         raise ValueError("Can not find proper phi_1 orthogonal to previous basis \
-                                set:",multi_now,isOrtho_all)
+                                set:",multi_now,isindependt_all)
                 elif i == ndim-1 and ip == self.dim-1 :
                     raise ValueError("Can not find phi_1 with finite elements  in <make_phi1>")
                 else :
@@ -207,6 +208,12 @@ class ReductRep(Irrep):
             for j in range(self.nrank):
                 P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][0,i])*op[j]
             self.projector[name] = P_normal
+            if i > 0:
+                name1 = 'P' + str(i) + str(i)
+                for j in range(self.nrank):
+                    P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i,i])*op[j]
+                self.projector[name1] = P_normal
+
         # then W10, W21, ...
         if self.dim > 1 :
             for i in range(self.dim-1):
@@ -382,7 +389,68 @@ class MBPGsubs(MBPG):
                 irr.reduction(self.op,self.irrep)
 #           irr.reductstate= 'ok'
             self.irrep.append(irr)
+        # test
+        for i in range(1,len(self.irrep)):
+            if self.irrep[i].multi == 0 :
+                continue
+            else:
+                for imul in range(self.irrep[i].multi):
+                    name_i = 'multi' + str(imul)
+                    basis_i = self.irrep[i].basis[name_i]
+                    for j in range(i):
+                        if self.irrep[j].multi == 0:
+                            continue
+                        else:
+                            for jmul in range(self.irrep[j].multi):
+                                name_j  = 'multi' + str(jmul)
+                                basis_j = self.irrep[j].basis[name_j]
+                                isOrtho = isOrthogonal(basis_i,basis_j)
+                                print('')
+                                print('multi:',imul,'of',self.irrep[i].label,'<-->','multi:',jmul,'of',self.irrep[j].label,\
+                                ' : ', isOrtho)
+                                print('')
 
+    # this method is valid to use only in the case that the self.irrep.projectors() has been assigned
+    def check_projectors(self):
+        print("")
+        print(10*'* *')
+        print(' * I am checking the properties of projectors : W^i_{np}W^j_{qr} = W^i_{nr}\delta_{ij}\delta_{pq}')
+        print(10*'* *')
+        print("")
+        for i in range(len(self.irrep)):
+            Proi = []
+            for idim in range(self.irrep[i].dim):
+                Proi.append(self.irrep[i].projector['P'+str(0)+str(idim)])
+                if idim < self.irrep[i].dim-1:
+                    Proi.append(self.irrep[i].projector['P'+str(idim+1)+str(idim)])
+                
+            for j in range(len(self.irrep)):
+                proj_is_good = []
+                Proj = []
+                if j != i :
+                    for jdim in range(self.irrep[j].dim):
+                        Proj.append(self.irrep[j].projector['P'+str(0)+str(jdim)])
+                        if jdim < self.irrep[j].dim-1:
+                            Proj.append(self.irrep[j].projector['P'+str(jdim+1)+str(jdim)])
+
+                    for ipro in Proi:
+                        for jpro in Proj:
+                            if np.sum(np.abs(np.dot(ipro,jpro))) > 1.0E-6:
+                                proj_is_good.append(False)
+                            else : 
+                                proj_is_good.append(True)
+                if j == i :
+                    for ipro in range(self.irrep[i].dim):
+                        pro_t = self.irrep[i].projector['P'+str(ipro)+str(ipro)]
+                        if np.sum(np.abs(np.dot(pro_t,pro_t) - pro_t)) > 1.0E-6:
+                            proj_is_good.append(False)
+                        else : 
+                            proj_is_good.append(True)
+                print('i = ',self.irrep[i].label,'j = ',self.irrep[j].label)
+                if all(proj_is_good) == True or proj_is_good == [] :
+                    print('     : beautiful~~~', proj_is_good)
+                else:
+                    print('     : sad ~~~',proj_is_good)
 
 
 class TranOrb():
