@@ -6,6 +6,7 @@ import os
 import sys
 from pg.PG_util import pmutt, decompose_vec, RepBasisNorm, isOrthogonal, isindependent
 from pg.read_IR_DSG import loadIR 
+import copy
 
 class Irrep:
     '''
@@ -38,8 +39,9 @@ class Irrep:
 class ReductRep(Irrep):
     def __init__(self,label='',dim=1):
         super().__init__(label='',dim=1)
-        self.multi      = 0   # dictionary to contain various projectors for a certain Irrep
+        self.multi      = 100 # dictionary to contain various projectors for a certain Irrep
         self.projector  = {}  # dictionary to contain various projectors for a certain Irrep
+#       self.reductstate= ''
         self.basis      = {}  # a dict of different set of basis for different <multi>, each set contain
                               # a list of basis whose number is the dimension of the irrep. For example
                               # self.multi = 2, self.dim = 3 , then the self.basis = dict{'multi0'=[np.array([.1D.the
@@ -47,11 +49,12 @@ class ReductRep(Irrep):
                               # 'multi1'=[np.array([...1D..the first..]),np.array([...the second...]),np.array([...the
                               # third...])]} 
     # multi should be assigned with the help of method of super class 
-    def reduction(self,op):
+    def reduction(self,op,irrep_prev):
         '''
         will reduce the reducible representation op
         input : 
-            op [list]: is a list of numpy.ndarray which is the representation matrix of every operators of the PG
+            op [list]  : is a list of numpy.ndarray which is the representation matrix of every operators of the PG
+            irrep_prev : other irrep whose multiplicity is greater than 0 and has been reduced successfully. 
             <self.projector and self.multi refers to information about "this irrep" and "this input op">
         '''
         for imul in range(self.multi):
@@ -60,20 +63,22 @@ class ReductRep(Irrep):
             print('')
             print(20*'=')
             print('* * imul :',imul+1)
-            phi_t1 = self.make_phi1(imul,op[0].shape[0])
-            print('norm(phi1) of multi',imul,'of ',self.label,'is :',np.linalg.norm(phi_t1))
+            phi_t1 = self.make_phi1(imul,op[0].shape[0],irrep_prev)
+            print(20*'- -') 
+            print('* WAVE(phi1) Done :  of multi<',imul,'> of <',self.label,'> is :',np.linalg.norm(phi_t1))
             basis_list = []
             basis_list += phi_t1
             if self.dim > 1 :
                 phi_other = self.make_phi_other(phi_t1[0],imul)
                 basis_list += phi_other
-            print('basis set for multi',imul,'of ',self.label,'is\n',basis_list)
+            print('* basis set for multi',imul,'of ',self.label,'is\n',basis_list)
+            print(20*'- -') 
             self.basis[name_key] = basis_list
                 
 
 
 
-    def make_phi1(self,multi_now,ndim):
+    def make_phi1(self,multi_now,ndim,irrep_prev):
         '''
         according to intro. in Alttman's point group tables,
         W^i_11 \phi = \phi^i_1 
@@ -87,6 +92,9 @@ class ReductRep(Irrep):
                             [0,1,0,0, ...]
                             [0,0,1,0, ...]
                             until the useful \phi^i_1 has been found
+                irrep_prev: other irrep whose multiplicity is greater than 0 and has been reduced successfully. 
+                            this input is used to make the new produced \phi^i_1 is orthogonal to the basis set of 
+                            other irreps of this PG
         output: func_1 [list of a <1D-numpy.ndarray>] 
         '''
         for i in range(ndim):
@@ -107,26 +115,45 @@ class ReductRep(Irrep):
 #               func_1_list.append(func_1)
                 if np.sum(np.abs(func_1)) > 1.0E-8 :
                     func_1 = RepBasisNorm(func_1) 
-                    if int(multi_now) > 0 :
-                        isOrtho_all = []
-                        for imul in range(multi_now):
-                            mul_name  = 'multi' + str(imul)
-                            basis_set = self.basis[mul_name]
-#                           print('func1=\n',func_1)
-#                           print('basis_set=\n',basis_set)
-#                           isOrtho   = isOrthogonal(func_1,basis_set) 
-                            isOrtho   = isindependent(func_1,basis_set) 
-                            isOrtho_all += isOrtho
-                        print('? is orthogonal to pervious set: ',isOrtho_all)
-                        print('\n\n')
-                        if all(isOrtho_all) == True :
-                            print('the proper phi for phi1 of mulit=',multi_now,'of irreps ',self.label,'is',i+1)
-                            return [func_1]
-                        elif i == ndim-1  and ip == self.dim-1 :
-                            raise ValueError("Can not find proper phi_1 orthogonal to previous basis \
-                                    set:",multi_now,isOrtho_all)
+                    isOrtho_all = []
+                    print(5*'- ')
+                    print('   check orthogonality ...')
+                    if int(multi_now) > 0 or len(irrep_prev) > 0 :
+                        print('multi_now(from 0) =',multi_now,'/',self.multi,'  ','num of irrep_prev :',len(irrep_prev))
+                        print(5*'- ')
+                        if int(multi_now) > 0 :
+                            print('')
+                            for imul in range(multi_now):
+                                print('   Ortho:  multi(from 0)=',imul,'multi(now)=',multi_now)
+                                mul_name  = 'multi' + str(imul)
+                                basis_set = self.basis[mul_name]
+#                               print('func1=\n',func_1)
+#                               print('basis_set=\n',basis_set)
+#                               isOrtho   = isOrthogonal(func_1,basis_set) 
+                                isOrtho   = isindependent(func_1,basis_set) 
+                                isOrtho_all += isOrtho
+                        if len(irrep_prev) > 0 :
+                            for irr in irrep_prev :
+                                if irr.multi > 0:
+                                    for imul in range(irr.multi):
+                                        print('   Ortho:  multi(from 0)=',imul,'/',irr.multi)
+                                        mul_name = 'multi' + str(imul)
+                                        basis_set = irr.basis[mul_name]
+                                        isOrtho   = isindependent(func_1,basis_set) 
+                                        isOrtho_all += isOrtho
                     else:
                         return [func_1]
+                    #
+                    print('   ??? is orthogonal to pervious set: \n','   ',isOrtho_all)
+                    print('\n')
+                    if all(isOrtho_all) == True :
+                        print(10*'*-')
+                        print('* the proper phi for phi1 of mulit=',multi_now,'of irreps ',self.label,'is',i+1)
+                        print(10*'*-')
+                        return [func_1]
+                    elif i == ndim-1  and ip == self.dim-1 :
+                        raise ValueError("Can not find proper phi_1 orthogonal to previous basis \
+                                set:",multi_now,isOrtho_all)
                 elif i == ndim-1 and ip == self.dim-1 :
                     raise ValueError("Can not find phi_1 with finite elements  in <make_phi1>")
                 else :
@@ -147,9 +174,8 @@ class ReductRep(Irrep):
             name_proj = 'P' + str(i+1) + str(i)
             proj      = self.projector[name_proj]
             basis_t   = np.dot(proj,phi_1)
-            print('norm(phi',str(i+1)+str(i),') of multi',multi_now,'of ',self.label,'is :',np.linalg.norm(basis_t))
+            print('* WAVE(phi'+str(i+2)+') Done :  of multi<',multi_now,'> of <',self.label,'> is :',np.linalg.norm(basis_t))
             basis_other.append(basis_t)
-        
         return basis_other
 
         
@@ -284,7 +310,11 @@ class DPG():
         for grp in lgrps:
             if grp.klabel == 'GM' :
                 self.nrank    = len(grp.rotC)
-                self.rep_vec  = grp.rotcar
+                self.rep_vec  = [np.transpose(i) for i in grp.rotcar] # bilbao's data is transfromed in columns and we transpose it
+                                                         # here but you should know when we use the manybody version of
+                                                         # it to construct the projectors, we will use the form which
+                                                         # transform in columns as same as the convention of group
+                                                         # theory
                 self.rep_spin = grp.su2s
                 self.irreps   = grp.irreps
 #               print('dpg71.nrank:\n',self.nrank)
@@ -303,7 +333,8 @@ class MBPG():
         '''
         attributes:
             nop [I]       : rank of the point group
-            op  [list]    : a list of numpy.ndarray which is the matrix rep. of operators in natural basis
+            op  [list]    : a list of numpy.ndarray which is the matrix rep. of operators in natural basis, transfrom in
+                            # columns
 #           irrep [list]  : a list of Irrep 
         '''
         self.nop = nop
@@ -339,14 +370,19 @@ class MBPGsubs(MBPG):
         '''
         for ir in irrep_input:
             irr = ReductRep()
-            irr.label = ir.label
-            irr.dim   = ir.dim
-            irr.matrices   = ir.matrices
-            irr.characters = ir.characters
+            irr.label = copy.deepcopy(ir.label)
+            irr.dim   = copy.deepcopy(ir.dim)
+            irr.matrices   = copy.deepcopy(ir.matrices)
+            irr.characters = copy.deepcopy(ir.characters)
+            print('>>>>> irrep :',irr.label)
             irr.multi      = irr.cal_multi(self.op)
+            print('>>>>> multi :',irr.multi)
             irr.make_projector(self.op)
-            irr.reduction(self.op)
+            if irr.multi > 0 :
+                irr.reduction(self.op,self.irrep)
+#           irr.reductstate= 'ok'
             self.irrep.append(irr)
+
 
 
 class TranOrb():
@@ -397,7 +433,7 @@ class TranOrb():
         self.mapbasis  = {}
         self.nop       = len(self.umat)
         self.vec_oldbasis = None
-        self.umat_new   = []
+        self.umat_new   = [] # the resulting matrix transforms in rows, should be noticed when using it
         self.umat_so    = []
         
         assert self.shell in ['s','p','t2g','d','f'],   "I can not recognize shell"
@@ -610,7 +646,8 @@ class TranOrb():
                umat     = the representation matrix of operators of point group in cartesian space
                           (this function cope with just one operator once, for loop over every umat
                           of self.umat will be done in make_func_new function)
-        note : should first assign self.mapbasis
+        note : * should first assign self.mapbasis
+               * the umat is transfrom in rows(which means r' = umat * r) not like that in group theory in columns
         '''
         # construct new_struct,for example struct_t = np.array([2,1,1]), umat=np.array([[1,1,0],[0,1,1],[1,1,1]])
         # new_struct = np.array([[1,1,0],[1,1,0],[0,1,1],[1,1,1]])

@@ -30,7 +30,6 @@ def isindependent(basis,basis_set):
     '''
     if isinstance(basis_set, list):
         isOrtho = True
-        print("")
         param_tmp = np.zeros(len(basis_set),dtype=np.complex128)
         basis_t   = copy.deepcopy(basis)
         for ir in range(len(basis_set)):
@@ -38,9 +37,10 @@ def isindependent(basis,basis_set):
             basis_t = basis_t - param_tmp[ir] * basis_set[ir]
         if np.sum(np.abs(basis_t)) < 1.0E-2 : 
             isOrtho = False
-            print('    Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
+            print('         Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
         else :
-            print('Not Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
+            print('     Not Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
+        print("")
         return [isOrtho]
     elif isinstance(basis_set,np.ndarray):
         isOrtho = True

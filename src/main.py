@@ -4,13 +4,13 @@ from module.atomic_stream import atomic_make_cumat,atomic_tran_cumat#(norbs, amt
 from module.mod_dump import dump_4dc, dump_2dc
 from module.mod_read import read_4dc
 from module.atomic_hmat import atomic_make_hmtrx#(norbs, totncfgs, ncfgs, state, invcd, invsn, eimp, umat, hmat)
-from src.atomic_subs   import atomic_state  
+from src.atomic_subs   import atomic_state, decide_unitary_len 
 from scipy.special import comb,perm
 from module.atomic_basis import atomic_make_basis#(norbs,totncfgs,ncfgs,ntots,nmin,nmax,nstat)
 from pg.PG import DPG, TranOrb, MBPG, MBPGsubs
 from pg.PG_util import Point_ID,pmutt,decompose_vec,get_TranOrb_param
 from pg.read_IR_DSG import *
-from wanntb.tran import tran_op
+from wanntb.tran import tran_op, tran_unitary
 import copy
 #from module.atomic_angular import atomic_make_sp2np
 from module.gw_make_new import gw_make_newui 
@@ -55,17 +55,25 @@ Oprt_PG = TranOrb(dpg71.rep_vec,dpg71.rep_spin,npoly1,dim=dim1,npower=npower1,nf
 ##Oprt_PG.show_attribute() if test else 0
 
 # <transform MRO into natural basis(MRN)>
-print('umat_so_original:',Oprt_PG.umat_so)
+##print('umat_so_original:',Oprt_PG.umat_so)
 umat_so_natural = tran_op(Oprt_PG.umat_so, atom1.amat) 
+#umat_so_natural = tran_unitary(Oprt_PG.umat_so,atom1.amat,transpose=True) 
 
 # construct projectors 
 sta = int(0)
 for inn in range(atom1.nmin,atom1.nmax+1):
+    print(40*'*')
+    print('* nocc = ',inn)
     len_sp   = int(comb(atom1.norb,inn))
     basis1,invcd1,invsn1 = atomic_make_basis(atom1.norb,atom1.totncfgs,len_sp,atom1.norb,inn,inn,nstat)
     manybody_umat   = []
     unitary_len = perm(atom1.norb, inn, exact=True)
+#   unitary_len =  decide_unitary
+    cnt_op = int(-1)
     for imat in umat_so_natural:
+        print(30*'*')
+        cnt_op += 1
+        print('* nop = ',cnt_op)
 #for imat in Oprt_PG.umat_so:
 #   umat_mb_tmp = atomic_make_sp2np(atom1.norb, atom1.totncfgs, atom1.ncfgs, basis, invsn, invcd, imat)
         umat_mb_tmp = gw_make_newui(atom1.norb,len_sp,atom1.totncfgs,unitary_len,inn,inn,imat,basis1,invcd1,invsn1,1.0E-8)

@@ -11,7 +11,7 @@
       integer,      intent(in)   :: basis(num_config)
       integer,      intent(in)   :: invcd(num_orb,num_config)
       integer,      intent(in)   :: invsn(0:totncfgs-1)
-      complex(8),   intent(in)   :: UNmtrxp00(num_orb,num_orb)
+      complex(8),   intent(in)   :: UNmtrxp00(num_orb,num_orb) ! should transform in columns
       real(kind=8), optional     :: prec
       complex(8),   intent(out)  :: UImtrxp00(num_config,num_config)
 !
@@ -60,7 +60,7 @@
       offset_m=0
 !      
       do occ_n=occ1,occ2
-         print *,'======================================'
+!        print *,'======================================'
          occt=occ_n
          call state_pick(occ_n,num_orb,int_tmp)
 !        num=state_pick(occ_n,num_orb)
