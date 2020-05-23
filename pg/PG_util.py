@@ -47,7 +47,7 @@ def isindependent(basis,basis_set):
         basis_t   = copy.deepcopy(basis)
         param_tmp = np.dot(np.conjugate(basis_set),basis)
         basis_t   = basis_t - param_tmp * basis_set
-        if np.sum(np.abs(basis_t)) < 1.0 : 
+        if np.sum(np.abs(basis_t)) < 0.1 : 
             isOrtho = False
             print('    Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
         else :
@@ -67,7 +67,7 @@ def isOrthogonal(basis,basis_set):
         isOrtho = [True for i in range(len(basis_set))]
         print("")
         for ir in range(len(basis_set)):
-            if np.abs(np.dot(np.conjugate(basis),basis_set[ir])) > 1.0E-4:
+            if np.abs(np.dot(np.conjugate(basis),basis_set[ir])) > 1.0E-6:
                 print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set[ir])))
                 isOrtho[ir] = False
             else :
@@ -77,7 +77,7 @@ def isOrthogonal(basis,basis_set):
         return isOrtho
     elif isinstance(basis, np.ndarray) and isinstance(basis_set,np.ndarray):
         isOrtho = True
-        if np.abs(np.dot(np.conjugate(basis),basis_set)) > 1.0E-4:
+        if np.abs(np.dot(np.conjugate(basis),basis_set)) > 1.0E-6:
             print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set)))
             isOrtho = False
         else:
@@ -93,7 +93,7 @@ def isOrthogonal(basis,basis_set):
                 if np.array_equal(ir1,ir2):
                     print('-----> equal')
                     continue 
-                elif np.abs(np.dot(np.conjugate(ir1),ir2)) > 1.0E-4:
+                elif np.abs(np.dot(np.conjugate(ir1),ir2)) > 1.0E-6:
                     print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),ir2)))
                     isOrtho = False
                 else:
@@ -105,7 +105,7 @@ def isOrthogonal(basis,basis_set):
             if np.array_equal(ir1,basis_set):
                 print('-----> equal')
                 continue 
-            elif np.abs(np.dot(np.conjugate(ir1),basis_set)) > 1.0E-4:
+            elif np.abs(np.dot(np.conjugate(ir1),basis_set)) > 1.0E-6:
                 print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),basis_set)))
                 isOrtho = False
             else:

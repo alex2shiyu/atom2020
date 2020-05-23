@@ -15,13 +15,14 @@ Example:
 def proj(x,u):
     ## Can't hurt
     u = unit_vec(u)
-    return np.dot(x,u) * u
+    return np.dot(np.conjugate(x),u)/np.dot(np.conjugate(u),u) * u
 
 def unit_vec(x):
     """Get unit vector of x. Same direction, norm==1"""
-    return x/np.linalg.norm(x)
+#   return x/np.linalg.norm(x)
+    return x
 
-def modifiedGramSchmidt(vectors):
+def GramSchmidt(vectors):
     """ _correct_ recursive implementation of Gram Schmidt algo that is not subject to 
     rounding erros that the original formulation is. 
 
@@ -44,7 +45,7 @@ def modifiedGramSchmidt(vectors):
     #           | easy row stacking
     #           |                                            | Get the orthagonal projection of each subsequent vector onto u1 (ensures whole space is now orthagonal to u1)                  
     #                       | Recurse on the projections     |
-    basis = np.vstack( (u1, modifiedGramSchmidt( list(map(lambda v: v - proj(v,u1), vectors[1:])))) ) # not explicit list(map) conversion, need for python3+
+    basis = np.vstack( (u1, GramSchmidt( list(map(lambda v: v - proj(v,u1), vectors[1:])))) ) # not explicit list(map) conversion, need for python3+
 
     return np.array(basis)
 

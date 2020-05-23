@@ -58,6 +58,10 @@
       end if
       offset_n=0
       offset_m=0
+!     print *,'F:UN(1,2)', UNmtrxp00(1,2)
+!     print *,'F:UN(2,1)', UNmtrxp00(2,1)
+!     print *,'F:UN(2,3)', UNmtrxp00(2,3)
+!     print *,'F:UN(3,2)', UNmtrxp00(3,2)
 !      
       do occ_n=occ1,occ2
 !        print *,'======================================'

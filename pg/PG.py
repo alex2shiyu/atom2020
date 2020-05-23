@@ -7,6 +7,7 @@ import sys
 from pg.PG_util import pmutt, decompose_vec, RepBasisNorm, isOrthogonal, isindependent
 from pg.read_IR_DSG import loadIR 
 import copy
+from pg.gramSchmidt import GramSchmidt
 
 class Irrep:
     '''
@@ -48,6 +49,70 @@ class ReductRep(Irrep):
                               # first basis.]),[..the second one.],[...the third one ...]],
                               # 'multi1'=[np.array([...1D..the first..]),np.array([...the second...]),np.array([...the
                               # third...])]} 
+        self.basis_normortho   = {}  # it is orthogonal and normalized. Structure of this attribute is same with that of
+                                     # self.basis
+    def irrep_normortho(self):
+        '''
+        aim : we assume that the basis space of different type of irrep constructed with the help
+              of projectors is already orthogonal to each other. It should be right and I make sure that 
+              with the method MBPGsubs.check_projectors(). The results for D2h DPG in N=8 subspace of d orbitals
+              shows that the value for inner product of basis of different irreps is less than 1.0E-4, there are
+              about 10 inner products is ~ 1.0E-5 and most of them is less than 1.0E-9. I don't know why there are 
+              still about 10 of them is as large as 1.0E-5. I guess because of the way we construct unitary matrix 
+              in many-body space. However this is already a good approximation.
+        note : should use this method after the reduction has been used
+        '''
+        vectors_new = []
+        vectors_org = []
+        for idim in range(self.dim):
+            vectors_tmp = []
+            for i in range(self.multi):
+                name_t = 'multi' + str(i)
+                vectors_tmp.append(self.basis[name_t][idim])
+            vectors_org.append(vectors_tmp)
+        vectors_n1 = GramSchmidt(vectors_org[0])
+        vectors_new.append(vectors_n1)
+        # get transform matrix 
+        v_o = np.array(vectors_org[0])
+        v_o_d = np.dot(v_o, np.transpose(np.conjugate(v_o)))
+        Schmidt_umat = np.dot(np.dot(vectors_new[0],np.transpose(np.conjugate(v_o))),np.linalg.inv(v_o_d))
+        # check the self-consistency of Schmidt_umat 
+        check_umat = np.sum(np.abs(np.dot(Schmidt_umat,np.array(vectors_org[0]))-vectors_new[0]))
+        check_max  = np.max(np.abs(np.dot(Schmidt_umat,np.array(vectors_org[0]))-vectors_new[0]))
+        if check_umat < 1.0E-8:
+            print(5*" ","check the self-consistency of Schmidt_umat of ",self.label," : OK")
+        else:
+            print(5*" ","check the self-consistency of Schmidt_umat of ",self.label," : Fail --> ",check_umat)
+            print(5*" ","                                              ",self.label," : max  --> ",check_max)
+        if self.dim > 1 :
+            print(5*' ',10*'- . ')
+            for idim in range(1,self.dim):
+                vectors_n_t = np.dot(Schmidt_umat,np.array(vectors_org[idim]))
+                vectors_new.append(vectors_n_t)
+                isOrtho_no = isOrthogonal(list(vectors_n_t),list(vectors_n_t))
+                print(" * check for orthogonality of new produced basis")
+                print(5*' ',10*'- .. ')
+                print(5*' ',' *[New Ortho] dim =',idim)
+                print(5*' ','                   ',isOrtho_no)
+                print('')
+                # check orthogonal
+
+
+        # which has been normalized and orthogonalized
+        vectors_normortho = []
+        for i in range(self.dim):
+            vectors_normortho_t = RepBasisNorm(list(vectors_new[i]))
+            vectors_normortho.append(vectors_normortho_t)
+        
+        # assign self.basis_normortho
+        for i in range(self.multi):
+            name_t = 'multi' + str(i)
+            basis_or_t = []
+            for j in range(self.dim):
+                basis_or_t.append(vectors_normortho[j][i])
+            self.basis_normortho[name_t] = copy.deepcopy(basis_or_t)
+
+
     # multi should be assigned with the help of method of super class 
     def reduction(self,op,irrep_prev):
         '''
@@ -385,8 +450,10 @@ class MBPGsubs(MBPG):
             irr.multi      = irr.cal_multi(self.op)
             print('>>>>> multi :',irr.multi)
             irr.make_projector(self.op)
+            print('>>>>> projectors :\n',irr.projector)
             if irr.multi > 0 :
                 irr.reduction(self.op,self.irrep)
+                irr.irrep_normortho()
 #           irr.reductstate= 'ok'
             self.irrep.append(irr)
         # test
@@ -452,6 +519,20 @@ class MBPGsubs(MBPG):
                 else:
                     print('     : sad ~~~',proj_is_good)
 
+
+#   def Fock2irreps(self):
+#       '''
+#       aim : after MBPGsubs.Cal_ReductRep() has been well executed,
+#             we need to construct the unitary matrix which transfroming the Fock basis to 
+#             the irreps basis in each N subspace
+#       '''
+#       for i in range(len(self.irrep)):
+#           if self.irrep[i].multi == 0 :
+#               continue
+#           else:
+#               for imul in range(self.irrep[i].multi):
+#                   name_i  = 'multi' + str(imul)
+#                   basis_i = self.irrep[i].basis[name_i]
 
 class TranOrb():
     '''
