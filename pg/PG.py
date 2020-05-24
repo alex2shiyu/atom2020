@@ -226,69 +226,71 @@ class ReductRep(Irrep):
                             other irreps of this PG
         output: func_1 [list of a <1D-numpy.ndarray>] 
         '''
+        label_list = []
+        name_ip = 'P00'
         for i in range(ndim):
-            print("")
-            print(10*'*')
-            print(2*'* ','i :',i+1)
+            label_list_tmp = []
+            print("\n",10*'*','\n',2*'* ','i :',i)
             func_all    = np.zeros(ndim,dtype=np.complex128)
             func_all[i] = complex(1.0)
-#           func_1_list   = []
-#           for ip in range(self.dim):
-            for ip in range(1):
-                print("")
-                print('. . . . . . . . . ')
-                print('i(P_i+1_i)=',ip+1,'|')
-                print('. . . . . . . . . ')
-                name_ip = 'P' + str(0) + str(ip)
-                Proj    = self.projector[name_ip]
-                func_1  = np.einsum('ij,i->j',Proj,func_all)
-#               func_1  = np.dot(Proj,func_all)
-#               func_1_list.append(func_1)
-                if np.sum(np.abs(func_1)) > 1.0E-3 :
-                    func_1 = RepBasisNorm(func_1) 
-                    isindependt_all = []
-                    print(5*'- ')
-                    print('   check independence ...')
-                    if int(multi_now) > 0 or len(irrep_prev) > 0 :
-                        print('multi_now(from 0) =',multi_now,'/',self.multi,'  ','num of irrep_prev :',len(irrep_prev))
-                        print(5*'- ')
-                        if int(multi_now) > 0 :
-                            print('')
-                            for imul in range(multi_now):
-                                print('   independent:  multi(from 0)=',imul,'multi(now)=',multi_now)
-                                mul_name  = 'multi' + str(imul)
-                                basis_set = self.basis[mul_name]
-#                               print('func1=\n',func_1)
-#                               print('basis_set=\n',basis_set)
-#                               isOrtho   = isOrthogonal(func_1,basis_set) 
-                                independt   = isindependent(func_1,basis_set) 
+#           for ip in range(1):
+            print("\n",'. . . . . . . . . ','\n','i(P_i+1_i)=',0,'|','\n','. . . . . . . . . ')
+            Proj    = self.projector[name_ip]
+            func_1  = np.einsum('ij,i->j',Proj,func_all)
+            func_1  = RepBasisNorm(func_1) 
+            isindependt_all = []
+            print(5*'- ','\n','   check independence ...')
+            if int(multi_now) > 0 or len(irrep_prev) > 0 :
+                print('multi_now(from 0) =',multi_now,'/',self.multi,'  ','num of irrep_prev :',len(irrep_prev))
+                print(5*'- ')
+                if int(multi_now) > 0 :
+                    print('')
+                    for imul in range(multi_now):
+                        print('   independent:  multi(from 0)=',imul,'multi(now)=',multi_now)
+                        mul_name  = 'multi' + str(imul)
+                        basis_set = self.basis[mul_name]
+                        label_t, independt   = isindependent(func_1,basis_set) 
+                        isindependt_all += independt
+                        label_list_tmp += label_t
+                if len(irrep_prev) > 0 :
+                    for irr in irrep_prev :
+                        if irr.multi > 0:
+                            for imul in range(irr.multi):
+                                print('   independent:  multi(from 0)=',imul,'/',irr.multi)
+                                mul_name = 'multi' + str(imul)
+                                basis_set = irr.basis[mul_name]
+                                label_t, independt   = isindependent(func_1,basis_set) 
                                 isindependt_all += independt
-                        if len(irrep_prev) > 0 :
-                            for irr in irrep_prev :
-                                if irr.multi > 0:
-                                    for imul in range(irr.multi):
-                                        print('   independent:  multi(from 0)=',imul,'/',irr.multi)
-                                        mul_name = 'multi' + str(imul)
-                                        basis_set = irr.basis[mul_name]
-                                        independt   = isindependent(func_1,basis_set) 
-                                        isindependt_all += independt
-                    else:
-                        return [func_1]
-                    #
-                    print('   ??? is independent to pervious set: \n','   ',isindependt_all)
-                    print('\n')
-                    if all(isindependt_all) == True :
-                        print(10*'*-')
-                        print('* the proper phi for phi1 of mulit=',multi_now,'of irreps ',self.label,'is',i+1)
-                        print(10*'*-')
-                        return [func_1]
-                    elif i == ndim-1  and ip == self.dim-1 :
-                        raise ValueError("Can not find proper phi_1 orthogonal to previous basis \
-                                set:",multi_now,isindependt_all)
-                elif i == ndim-1 and ip == self.dim-1 :
-                    raise ValueError("Can not find phi_1 with finite elements  in <make_phi1>")
-                else :
-                    print('Warning : norm of phi_1 is too small ...')
+                                label_list_tmp += label_t
+                label_list.append(np.sum(np.array(label_list_tmp)))
+            else:
+#               return [func_1]
+                label_list.append(np.sum(np.abs(func_1)))
+        
+        pos_target = label_list.index(max(label_list))
+        print(10*'*-')
+        print('* the proper phi for phi1 of mulit=',multi_now,'of irreps ',self.label,'is',pos_target+1)
+        print(10*'*-')
+        func_all    = np.zeros(ndim,dtype=np.complex128)
+        func_all[pos_target] = complex(1.0)
+        Proj    = self.projector[name_ip]
+        func_1  = np.einsum('ij,i->j',Proj,func_all)
+        func_1  = RepBasisNorm(func_1) 
+        return [func_1]
+#####               print('   ??? is independent to pervious set: \n','   ',isindependt_all)
+#####               print('\n')
+#####               if all(isindependt_all) == True :
+#####                   print(10*'*-')
+#####                   print('* the proper phi for phi1 of mulit=',multi_now,'of irreps ',self.label,'is',i+1)
+#####                   print(10*'*-')
+#####                   return [func_1]
+#####               elif i == ndim-1  and ip == self.dim-1 :
+#####                   raise ValueError("Can not find proper phi_1 orthogonal to previous basis \
+#####                           set:",multi_now,isindependt_all)
+#####           elif i == ndim-1 and ip == self.dim-1 :
+#####               raise ValueError("Can not find phi_1 with finite elements  in <make_phi1>")
+#####           else :
+#####               print('Warning : norm of phi_1 is too small ...')
         
     def make_phi_other(self,phi_1,multi_now):
         '''

@@ -28,12 +28,16 @@ def isindependent(basis,basis_set):
         basis : 1D numpy-ndarray
         basis_set : list of 1D numpy-ndarray or just numpy-ndarray
     '''
+    print('  ')
+    print('   entering isindependent ....')
     if isinstance(basis_set, list):
         isOrtho = True
         param_tmp = np.zeros(len(basis_set),dtype=np.complex128)
         basis_t   = copy.deepcopy(basis)
+        print('      I will should the components ...')
         for ir in range(len(basis_set)):
             param_tmp[ir] = np.dot(np.conjugate(basis_set[ir]),basis)
+            print('       i=',ir,'components = ',param_tmp[ir])
             basis_t = basis_t - param_tmp[ir] * basis_set[ir]
         if np.sum(np.abs(basis_t)) < 1.0 : 
             isOrtho = False
@@ -41,7 +45,7 @@ def isindependent(basis,basis_set):
         else :
             print('     Not Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
         print("")
-        return [isOrtho]
+        return [np.sum(np.abs(basis_t))], [isOrtho]
     elif isinstance(basis_set,np.ndarray):
         isOrtho = True
         basis_t   = copy.deepcopy(basis)
@@ -52,7 +56,7 @@ def isindependent(basis,basis_set):
             print('    Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
         else :
             print('Not Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
-        return [isOrtho]
+        return [np.sum(np.abs(basis_t))],[isOrtho]
     else:
         raise ValueError("Just support list of numpy-1Darray or numpy-1Darray not yet :",type(basis_set))
 
