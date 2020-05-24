@@ -47,17 +47,17 @@ dpg71 = DPG(atom1.point_group,pgid)
 sgid  = atom1.space_group 
 dpg71.get_data(sgid)
 #dpg71.groupclass_irrep()
-dpg71.show_attribute()
+#dpg71.show_attribute()
  
 # <make matrix representation(MRO: MROrb) in d f orbitals space> 
 npoly1, dim1, npower1, nfunc1 = get_TranOrb_param(atom1.soc_type)
 Oprt_PG = TranOrb(dpg71.rep_vec,dpg71.rep_spin,npoly1,dim=dim1,npower=npower1,nfunc=nfunc1,shell=atom1.soc_type)
-Oprt_PG.show_attribute() if test else 0
+#Oprt_PG.show_attribute() if test else 0
 
 # <transform MRO into natural basis(MRN)>
 ##print('umat_so_original:',Oprt_PG.umat_so)
-#umat_so_natural = tran_op(Oprt_PG.umat_so, atom1.amat) #umat_so_natrual  transforms in rows
-umat_so_natural = Oprt_PG.umat_so #umat_so_natrual  transforms in rows
+umat_so_natural = tran_op(Oprt_PG.umat_so, atom1.amat) #umat_so_natrual  transforms in rows
+#umat_so_natural = Oprt_PG.umat_so #umat_so_natrual  transforms in rows
 
 
 #umat_so_natural = tran_unitary(Oprt_PG.umat_so,atom1.amat,transpose=True) 
@@ -69,6 +69,7 @@ for inn in range(atom1.nmin,atom1.nmax+1):
     print(40*'*')
     print('* nocc = ',inn)
     len_sp   = int(comb(atom1.norb,inn))
+
     basis1,invcd1,invsn1 = atomic_make_basis(atom1.norb,atom1.totncfgs,len_sp,atom1.norb,inn,inn,nstat)
     manybody_umat   = []
     unitary_len = perm(atom1.norb, inn, exact=True)
@@ -78,16 +79,17 @@ for inn in range(atom1.nmin,atom1.nmax+1):
         print('     ',30*'*')
         cnt_op += 1
         print('     * nop = ',cnt_op)
+#       print('imat:\n',imat)
 #for imat in Oprt_PG.umat_so:
 #   umat_mb_tmp = atomic_make_sp2np(atom1.norb, atom1.totncfgs, atom1.ncfgs, basis, invsn, invcd, imat)
-# the input unitary matrix of gw_make_newui should be transformed in rows
+# the input unitary matrix of gw_make_newui should be transformed in columns, and output is also transformed in columns.
 #       print('P:UN(1,2)',imat[0,1])
 #       print('P:UN(2,1)',imat[1,0])
 #       print('P:UN(2,3)',imat[1,2])
 #       print('P:UN(3,2)',imat[2,1])
         umat_mb_tmp = gw_make_newui(atom1.norb,len_sp,atom1.totncfgs,unitary_len,inn,inn,np.transpose(imat),basis1,invcd1,invsn1,1.0E-8)
+#       umat_mb_tmp = gw_make_newui(atom1.norb,len_sp,atom1.totncfgs,unitary_len,inn,inn,imat,basis1,invcd1,invsn1,1.0E-8)
 # the manybody's unitary transform matrix should transfrom in columns like that in group theory
-#       manybody_umat.append(np.transpose(umat_mb_tmp)) # 
         manybody_umat.append(umat_mb_tmp) # 
 # construct instance of Mb_Pg
 #   pg_manybody = MBPG(len(manybody_umat),manybody_umat)

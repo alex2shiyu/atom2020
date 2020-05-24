@@ -1,6 +1,6 @@
 norb        10
-nmin        1
-nmax        1
+nmin        9
+nmax        9
 int_type    kanamori 
 int_val     5.0 3.2 0.9 0.9 0.9
 soc_type    d 

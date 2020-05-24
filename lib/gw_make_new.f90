@@ -153,6 +153,10 @@
       if(occ1.EQ.0)then
          UImtrxp00(1,1)=dcmplx(0.d0,0.d0)
       end if
+!     write(111,*)'UImtrxp00'
+!     write(111,*)'UImtrxp00[1,2](F)',UImtrxp00(1,2)
+!     write(111,*)'UImtrxp00[2,1](F)',UImtrxp00(2,1)
+!     write(111,*)UImtrxp00
       end subroutine gw_make_newui
 !
       recursive subroutine code_tranp(occ,n,num_orb,unitary_len,long,lgth,cnt_flag,code_last)
