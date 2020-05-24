@@ -51,6 +51,68 @@ class ReductRep(Irrep):
                               # third...])]} 
         self.basis_normortho   = {}  # it is orthogonal and normalized. Structure of this attribute is same with that of
                                      # self.basis
+
+
+    def irrep_normortho2(self):
+        '''
+        aim : we assume that the basis space of different type of irrep constructed with the help
+              of projectors is already orthogonal to each other. It should be right and I make sure that 
+              with the method MBPGsubs.check_projectors(). The results for D2h DPG in N=8 subspace of d orbitals
+              shows that the value for inner product of basis of different irreps is less than 1.0E-4, there are
+              about 10 inner products is ~ 1.0E-5 and most of them is less than 1.0E-9. I don't know why there are 
+              still about 10 of them is as large as 1.0E-5. I guess because of the way we construct unitary matrix 
+              in many-body space. However this is already a good approximation.
+        note : should use this method after the reduction has been used
+        difference : the difference with self.irrep_normortho2() is that I will orthogonalize the basis traversing 
+                     every dimension instead of orthogonalize only one and then othogonalize others with the unitary 
+                     matrix obtained from the one before.
+        '''
+        vectors_new = []
+        for idim in range(self.dim):
+            vectors_tmp = []
+            for i in range(self.multi):
+                name_t = 'multi' + str(i)
+                vectors_tmp.append(self.basis[name_t][idim])
+            vectors_n1 = GramSchmidt(vectors_tmp)
+            vectors_new.append(vectors_n1)
+
+        # normalized and orthogonalized
+        vectors_normortho = []
+        vectors_new_all = []
+        for i in range(self.dim):
+            vectors_normortho_t = RepBasisNorm(list(vectors_new[i]))
+            vectors_new_all += list(vectors_normortho_t)
+            vectors_normortho.append(vectors_normortho_t)
+       
+        # check for the orthogonalize of all the produced basis of a certain irreps
+        print(' ')
+        print(10*'* * ')
+        print(5*' ','>>> orthogonality[all] of the whole newly produced basis of the irrep ...')
+        is_allortho = isOrthogonal(vectors_new_all,vectors_new_all) 
+        print(5*' ','All is Orthogonal ?   ',is_allortho)
+
+        
+        # assign self.basis_normortho
+        for i in range(self.multi):
+            name_t = 'multi' + str(i)
+            basis_or_t = []
+            for j in range(self.dim):
+                basis_or_t.append(vectors_normortho[j][i])
+            self.basis_normortho[name_t] = copy.deepcopy(basis_or_t)
+        print(' ')
+        print(10*'* * ')
+        print(5*' ','>>> orthogonality[multi] between different multi ...')
+        for imul1 in range(self.multi):
+            name1 = 'multi' + str(imul1)
+            for imul2 in range(self.multi):
+                name2 = 'multi' + str(imul2)
+                print(5*'--')
+                is_ortho_multi = isOrthogonal(self.basis_normortho[name1],self.basis_normortho[name2])
+                print('Ortho: multi1 = ',imul1,' multi2 = ',imul2,'  -> ',is_ortho_multi)
+                print('')
+
+
+
     def irrep_normortho(self):
         '''
         aim : we assume that the basis space of different type of irrep constructed with the help
@@ -84,7 +146,7 @@ class ReductRep(Irrep):
         else:
             print(5*" ","check the self-consistency of Schmidt_umat of ",self.label," : Fail --> ",check_umat)
             print(5*" ","                                              ",self.label," : max  --> ",check_max)
-        if self.dim > 1 :
+        if self.dim > 0 :
             print(5*' ',10*'- . ')
             for idim in range(1,self.dim):
                 vectors_n_t = np.dot(Schmidt_umat,np.array(vectors_org[idim]))
@@ -137,6 +199,8 @@ class ReductRep(Irrep):
                 phi_other = self.make_phi_other(phi_t1[0],imul)
                 basis_list += phi_other
             print('* basis set for multi',imul,'of ',self.label,'is\n',basis_list)
+            is_multi_ortho = isOrthogonal(basis_list,basis_list)
+            print('* is this set basis orthogonal to each other :',is_multi_ortho)
             print(20*'- -') 
             self.basis[name_key] = basis_list
                 
@@ -177,9 +241,10 @@ class ReductRep(Irrep):
                 print('. . . . . . . . . ')
                 name_ip = 'P' + str(0) + str(ip)
                 Proj    = self.projector[name_ip]
-                func_1  = np.dot(Proj,func_all)
+                func_1  = np.einsum('ij,i->j',Proj,func_all)
+#               func_1  = np.dot(Proj,func_all)
 #               func_1_list.append(func_1)
-                if np.sum(np.abs(func_1)) > 1.0E-5 :
+                if np.sum(np.abs(func_1)) > 1.0E-3 :
                     func_1 = RepBasisNorm(func_1) 
                     isindependt_all = []
                     print(5*'- ')
@@ -210,7 +275,7 @@ class ReductRep(Irrep):
                     else:
                         return [func_1]
                     #
-                    print('   ??? is orthogonal to pervious set: \n','   ',isindependt_all)
+                    print('   ??? is independent to pervious set: \n','   ',isindependt_all)
                     print('\n')
                     if all(isindependt_all) == True :
                         print(10*'*-')
@@ -239,7 +304,8 @@ class ReductRep(Irrep):
         for i in range(self.dim-1):
             name_proj = 'P' + str(i+1) + str(i)
             proj      = self.projector[name_proj]
-            basis_t   = np.dot(proj,phi_1)
+#           basis_t   = np.dot(proj,phi_1)
+            basis_t   = np.einsum('ij,i->j',proj,phi_1)
             print('* WAVE(phi'+str(i+2)+') Done :  of multi<',multi_now,'> of <',self.label,'> is :',np.linalg.norm(basis_t))
             basis_other.append(basis_t)
         return basis_other
@@ -274,6 +340,7 @@ class ReductRep(Irrep):
                 P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][0,i])*op[j]
             self.projector[name] = P_normal
             if i > 0:
+                P_normal = np.zeros((dim_op,dim_op),dtype=np.complex128)
                 name1 = 'P' + str(i) + str(i)
                 for j in range(self.nrank):
                     P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i,i])*op[j]
@@ -284,7 +351,13 @@ class ReductRep(Irrep):
             for i in range(self.dim-1):
                 P_normal = np.zeros((dim_op,dim_op),dtype=np.complex128)
                 name = 'P' + str(i+1) + str(i)
+#               print(5*'** ','check for projectors matrix value : ')
                 for j in range(self.nrank):
+#                   print(10*' ')
+#                   print('Projectors : j=',j)
+#                   print(5*' ','characters : \n',self.matrices[j])
+#                   print(5*' ','op matrix  : \n',op[j])
+#                   print('')
                     P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i+1,i])*op[j]
                 self.projector[name] = P_normal
 
@@ -317,7 +390,7 @@ class DPG():
         self.name_sc   = name_sc
         self.pgid      = pgid
         self.nrank     = None
-        self.rep_vec   = []
+        self.rep_vec   = []    # the rep_vec has been transposed compared with data from Bilbao in the method get_data
         self.rep_spin  = None
         self.mb_shell  = None
         self.mb_norb   = None
@@ -453,10 +526,11 @@ class MBPGsubs(MBPG):
             print('>>>>> projectors :\n',irr.projector)
             if irr.multi > 0 :
                 irr.reduction(self.op,self.irrep)
-                irr.irrep_normortho()
+                irr.irrep_normortho2()
 #           irr.reductstate= 'ok'
             self.irrep.append(irr)
-        # test
+        # test for the orthogonal of different irreps
+        print(5*"* ",' orthogonality[irreps] between different irreps')
         for i in range(1,len(self.irrep)):
             if self.irrep[i].multi == 0 :
                 continue

@@ -35,7 +35,7 @@ def isindependent(basis,basis_set):
         for ir in range(len(basis_set)):
             param_tmp[ir] = np.dot(np.conjugate(basis_set[ir]),basis)
             basis_t = basis_t - param_tmp[ir] * basis_set[ir]
-        if np.sum(np.abs(basis_t)) < 0.1 : 
+        if np.sum(np.abs(basis_t)) < 1.0 : 
             isOrtho = False
             print('         Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
         else :
@@ -67,6 +67,8 @@ def isOrthogonal(basis,basis_set):
         isOrtho = [True for i in range(len(basis_set))]
         print("")
         for ir in range(len(basis_set)):
+            print(5*'-')
+            print('max_value:',np.max(np.abs(basis)),np.max(np.abs(basis_set[ir])))
             if np.abs(np.dot(np.conjugate(basis),basis_set[ir])) > 1.0E-6:
                 print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set[ir])))
                 isOrtho[ir] = False
@@ -77,6 +79,8 @@ def isOrthogonal(basis,basis_set):
         return isOrtho
     elif isinstance(basis, np.ndarray) and isinstance(basis_set,np.ndarray):
         isOrtho = True
+        print(5*'-')
+        print('max_value:',np.max(np.abs(basis)),np.max(np.abs(basis_set)))
         if np.abs(np.dot(np.conjugate(basis),basis_set)) > 1.0E-6:
             print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set)))
             isOrtho = False
@@ -88,8 +92,16 @@ def isOrthogonal(basis,basis_set):
         return isOrtho
     elif isinstance(basis,list) and isinstance(basis_set,list):
         isOrtho = True
+        cnt1 = 0
+        cnt2 = 0
         for ir1 in basis:
+            cnt1 += 1
+            cnt2 = 0
             for ir2 in basis_set:
+                cnt2 += 1
+                print(5*'-')
+                print('ir1=',cnt1,' ir2=',cnt2)
+                print('max_value:',np.max(np.abs(ir1)),np.max(np.abs(ir2)))
                 if np.array_equal(ir1,ir2):
                     print('-----> equal')
                     continue 
@@ -98,10 +110,13 @@ def isOrthogonal(basis,basis_set):
                     isOrtho = False
                 else:
                     print('Not sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),ir2)))
+                print('')
         return isOrtho
     elif isinstance(basis,list) and isinstance(basis_set,np.ndarray):
         isOrtho = True
         for ir1 in basis:
+            print(5*'-')
+            print('max_value:',np.max(np.abs(ir1)),np.max(np.abs(basis_set)))
             if np.array_equal(ir1,basis_set):
                 print('-----> equal')
                 continue 
