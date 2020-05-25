@@ -12,7 +12,7 @@ from pg.PG_util import Point_ID,pmutt,decompose_vec,get_TranOrb_param
 from pg.read_IR_DSG import *
 from wanntb.tran import tran_op, tran_unitary
 import copy
-#from module.atomic_angular import atomic_make_sp2np
+from module.atomic_angular import atomic_make_sp2np
 from module.gw_make_new import gw_make_newui 
 
 
@@ -56,8 +56,8 @@ Oprt_PG = TranOrb(dpg71.rep_vec,dpg71.rep_spin,npoly1,dim=dim1,npower=npower1,nf
 
 # <transform MRO into natural basis(MRN)>
 ##print('umat_so_original:',Oprt_PG.umat_so)
-umat_so_natural = tran_op(Oprt_PG.umat_so, atom1.amat) #umat_so_natrual  transforms in rows
-#umat_so_natural = Oprt_PG.umat_so #umat_so_natrual  transforms in rows
+#umat_so_natural = tran_op(Oprt_PG.umat_so, atom1.amat) #umat_so_natrual  transforms in rows
+umat_so_natural  = Oprt_PG.umat_so #umat_so_natrual  transforms in rows
 
 
 #umat_so_natural = tran_unitary(Oprt_PG.umat_so,atom1.amat,transpose=True) 
@@ -65,6 +65,7 @@ umat_so_natural = tran_op(Oprt_PG.umat_so, atom1.amat) #umat_so_natrual  transfo
 # construct projectors 
 Basis_list = []
 sta = int(0)
+pg_manybody = MBPG(len(umat_so_natural),[])
 for inn in range(atom1.nmin,atom1.nmax+1):
     print(40*'*')
     print('* nocc = ',inn)
@@ -79,16 +80,9 @@ for inn in range(atom1.nmin,atom1.nmax+1):
         print('     ',30*'*')
         cnt_op += 1
         print('     * nop = ',cnt_op)
-#       print('imat:\n',imat)
-#for imat in Oprt_PG.umat_so:
-#   umat_mb_tmp = atomic_make_sp2np(atom1.norb, atom1.totncfgs, atom1.ncfgs, basis, invsn, invcd, imat)
 # the input unitary matrix of gw_make_newui should be transformed in columns, and output is also transformed in columns.
-#       print('P:UN(1,2)',imat[0,1])
-#       print('P:UN(2,1)',imat[1,0])
-#       print('P:UN(2,3)',imat[1,2])
-#       print('P:UN(3,2)',imat[2,1])
+#       umat_mb_tmp1 = atomic_make_sp2np(atom1.norb, atom1.totncfgs, atom1.ncfgs, basis, invsn, invcd, imat)
         umat_mb_tmp = gw_make_newui(atom1.norb,len_sp,atom1.totncfgs,unitary_len,inn,inn,np.transpose(imat),basis1,invcd1,invsn1,1.0E-8)
-#       umat_mb_tmp = gw_make_newui(atom1.norb,len_sp,atom1.totncfgs,unitary_len,inn,inn,imat,basis1,invcd1,invsn1,1.0E-8)
 # the manybody's unitary transform matrix should transfrom in columns like that in group theory
         manybody_umat.append(umat_mb_tmp) # 
 # construct instance of Mb_Pg
@@ -116,15 +110,24 @@ for inn in range(atom1.nmin,atom1.nmax+1):
         print(check_u_tmp.diagonal())
         print('')
     print(5*' ',20*' * * ')
+
     pg_mb_sp = MBPGsubs(len(manybody_umat),manybody_umat)
     pg_mb_sp.Cal_ReductRep(dpg71.irreps)
     pg_mb_sp.check_projectors()
+    pg_mb_sp.collect_basis()#the eigenwaves arranges in rows
+    print(10*'* * ')
+    print('|*| final basis of irreps :\n',pg_mb_sp.allbasis['matrix'])
+    print('|*| the label of final basis of irreps :\n',pg_mb_sp.allbasis['irreplabel'])
+    print(10*'* * ')
+
     for irr in pg_mb_sp.irrep:
         print(5*' ','characters:\n',irr.characters.real)
         print(5*' ','multi for ',irr.label,'is ',irr.multi)
     # renew the start point of the next sub space  
     Basis_list.append(pg_mb_sp)
     sta += len_sp 
+
+# transform hamiltonian into basis of irreps
 
 
 

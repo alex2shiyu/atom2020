@@ -36,7 +36,7 @@ def isindependent(basis,basis_set):
         basis_t   = copy.deepcopy(basis)
         print('      I will should the components ...')
         for ir in range(len(basis_set)):
-            param_tmp[ir] = np.dot(np.conjugate(basis_set[ir]),basis)
+            param_tmp[ir] = np.dot(np.conjugate(basis_set[ir]),basis)/np.dot(np.conjugate(basis_set[ir]),basis_set[ir])
             print('       i=',ir,'components = ',param_tmp[ir])
             basis_t = basis_t - param_tmp[ir] * basis_set[ir]
         if np.sum(np.abs(basis_t)) < 1.0 : 

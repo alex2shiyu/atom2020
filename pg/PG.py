@@ -237,35 +237,39 @@ class ReductRep(Irrep):
             print("\n",'. . . . . . . . . ','\n','i(P_i+1_i)=',0,'|','\n','. . . . . . . . . ')
             Proj    = self.projector[name_ip]
             func_1  = np.einsum('ij,i->j',Proj,func_all)
-            func_1  = RepBasisNorm(func_1) 
-            isindependt_all = []
-            print(5*'- ','\n','   check independence ...')
-            if int(multi_now) > 0 or len(irrep_prev) > 0 :
-                print('multi_now(from 0) =',multi_now,'/',self.multi,'  ','num of irrep_prev :',len(irrep_prev))
-                print(5*'- ')
-                if int(multi_now) > 0 :
-                    print('')
-                    for imul in range(multi_now):
-                        print('   independent:  multi(from 0)=',imul,'multi(now)=',multi_now)
-                        mul_name  = 'multi' + str(imul)
-                        basis_set = self.basis[mul_name]
+            if np.sum(np.abs(func_1)) > 1.0e-4:
+                func_1  = RepBasisNorm(func_1) 
+                isindependt_all = []
+                print(5*'- ','\n','   check independence ...')
+                if int(multi_now) > 0 or len(irrep_prev) > 0 :
+                    print('multi_now(from 0) =',multi_now,'/',self.multi,'  ','num of irrep_prev :',len(irrep_prev))
+                    print(5*'- ')
+                    if int(multi_now) > 0 :
+                        print('')
+                        basis_set = []
+                        for imul in range(multi_now):
+                            print('   independent:  multi(from 0)=',imul,'multi(now)=',multi_now)
+                            mul_name  = 'multi' + str(imul)
+                            basis_set += self.basis[mul_name]
                         label_t, independt   = isindependent(func_1,basis_set) 
                         isindependt_all += independt
                         label_list_tmp += label_t
-                if len(irrep_prev) > 0 :
-                    for irr in irrep_prev :
-                        if irr.multi > 0:
-                            for imul in range(irr.multi):
-                                print('   independent:  multi(from 0)=',imul,'/',irr.multi)
-                                mul_name = 'multi' + str(imul)
-                                basis_set = irr.basis[mul_name]
-                                label_t, independt   = isindependent(func_1,basis_set) 
-                                isindependt_all += independt
-                                label_list_tmp += label_t
-                label_list.append(np.sum(np.array(label_list_tmp)))
+                    if len(irrep_prev) > 0 :
+                        for irr in irrep_prev :
+                            if irr.multi > 0:
+                                for imul in range(irr.multi):
+                                    print('   independent:  multi(from 0)=',imul,'/',irr.multi)
+                                    mul_name = 'multi' + str(imul)
+                                    basis_set = irr.basis[mul_name]
+                                    label_t, independt   = isindependent(func_1,basis_set) 
+                                    isindependt_all += independt
+                                    label_list_tmp += label_t
+                    label_list.append(np.sum(np.abs(np.array(label_list_tmp))))
+                else:
+#                   return [func_1]
+                    label_list.append(np.sum(np.abs(func_1)))
             else:
-#               return [func_1]
-                label_list.append(np.sum(np.abs(func_1)))
+                label_list.append(float(0.0))
         
         pos_target = label_list.index(max(label_list))
         print(10*'*-')
@@ -482,10 +486,13 @@ class MBPG():
             nop [I]       : rank of the point group
             op  [list]    : a list of numpy.ndarray which is the matrix rep. of operators in natural basis, transfrom in
                             # columns
+            subs [list]   : to contain the instance of MBPGsubs of different subspace of \hat{N}
+            basis [list]  : to contain basis 
 #           irrep [list]  : a list of Irrep 
         '''
-        self.nop = nop
-        self.op  = op
+        self.nop   = nop
+        self.op    = op
+        self.subs  = []
 #       self.irrep = []
 #       for ir in irrep:
 #           irr = Irrep()
@@ -510,7 +517,20 @@ class MBPGsubs(MBPG):
     def __init__(self, nop, op):
         super().__init__(nop, op)
         self.irrep = []
+        self.allbasis = {}
+        self.allbasis['matrix'] = []# due to it's a list, thus the eigenwaves arranged in rows
+        self.allbasis['irreplabel'] = []
     
+    # to collect all the basis after self.Cal_ReductRep()
+    def collect_basis(self):
+        for irr in self.irrep:
+            if irr.multi > 0 :
+                for imul in range(irr.multi):
+                    name = 'multi' + str(imul)
+                    for idim in range(irr.dim):
+                        self.allbasis['matrix'].append(irr.basis[name][idim])
+                        self.allbasis['irreplabel'].append([irr.label,irr.dim,idim])
+
     def Cal_ReductRep(self,irrep_input):
         '''
         traverse every possible irreps of the PG to calculate multiplicities and corresponding projectors
