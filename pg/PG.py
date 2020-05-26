@@ -2,6 +2,7 @@ from __future__ import division, print_function, absolute_import
 
 import numpy as np
 import pickle as pk
+from wanntb.tran import tran_op
 import os
 import sys
 from pg.PG_util import pmutt, decompose_vec, RepBasisNorm, isOrthogonal, isindependent
@@ -234,7 +235,7 @@ class ReductRep(Irrep):
             func_all    = np.zeros(ndim,dtype=np.complex128)
             func_all[i] = complex(1.0)
 #           for ip in range(1):
-            print("\n",'. . . . . . . . . ','\n','i(P_i+1_i)=',0,'|','\n','. . . . . . . . . ')
+            print("\n",'. . . . . . . . . ','\n','i(P_ii)=',0,'|','\n','. . . . . . . . . ')
             Proj    = self.projector[name_ip]
             func_1  = np.einsum('ij,i->j',Proj,func_all)
             if np.sum(np.abs(func_1)) > 1.0e-4:
@@ -267,6 +268,7 @@ class ReductRep(Irrep):
                     label_list.append(np.sum(np.abs(np.array(label_list_tmp))))
                 else:
 #                   return [func_1]
+                    print(5*'  ','NO NEED : because imul=',multi_now,'len(irrep_prev)=',len(irrep_prev))
                     label_list.append(np.sum(np.abs(func_1)))
             else:
                 label_list.append(float(0.0))
@@ -492,7 +494,9 @@ class MBPG():
         '''
         self.nop   = nop
         self.op    = op
+        self.ham   = None 
         self.subs  = []
+        self.dim   = 100  
 #       self.irrep = []
 #       for ir in irrep:
 #           irr = Irrep()
@@ -520,7 +524,32 @@ class MBPGsubs(MBPG):
         self.allbasis = {}
         self.allbasis['matrix'] = []# due to it's a list, thus the eigenwaves arranged in rows
         self.allbasis['irreplabel'] = []
-    
+        self.ham_irrep = np.zeros(op[0].shape,dtype=np.complex128)
+        self.ham_eig = None
+        self.ham_evc = None
+        self.deg     = 100
+        self.deginfo = []
+        self.irrepindex = {}
+        self.ham_evc_decompose = []
+   
+    def getirrepindex():
+        '''
+        aim   : to get the index in self.irrep
+        usage : self.irrepindex['GM1+'] = 0
+        '''
+        cnt_t = int(-1)
+        for ir in self.irrep :
+            cnt_t += 1
+            self.irrepindex[ir.label] = int(cnt_t)
+
+    # transfrom ham into basis of irreps after collecting bases
+    def trans_ham(self):
+        self.ham_irrep = tran_op(self.ham,np.transpose(np.array(self.allbasis['matrix'])))
+
+    # diagonalize ham after transforming the hamiltonian into irreps bases
+    def diag_ham(self):
+        self.ham_eig, self.ham_evc = np.linalg.eigh(self.ham_irrep)
+
     # to collect all the basis after self.Cal_ReductRep()
     def collect_basis(self):
         for irr in self.irrep:
@@ -535,6 +564,8 @@ class MBPGsubs(MBPG):
         '''
         traverse every possible irreps of the PG to calculate multiplicities and corresponding projectors
         '''
+        true_pre_irrep = [] # to contain the irreps which has self.multi greater than one for sake of reduction for the
+                            # following irreps
         for ir in irrep_input:
             irr = ReductRep()
             irr.label = copy.deepcopy(ir.label)
@@ -545,12 +576,17 @@ class MBPGsubs(MBPG):
             irr.multi      = irr.cal_multi(self.op)
             print('>>>>> multi :',irr.multi)
             irr.make_projector(self.op)
-            print('>>>>> projectors :\n',irr.projector)
+            print('>>>>> projectors :\n',irr.projector.keys())
             if irr.multi > 0 :
-                irr.reduction(self.op,self.irrep)
+#               irr.reduction(self.op,self.irrep)
+                irr.reduction(self.op,true_pre_irrep)
                 irr.irrep_normortho2()
+                true_pre_irrep.append(irr)
 #           irr.reductstate= 'ok'
             self.irrep.append(irr)
+        #
+        self.getirrepindex()
+        #
         # test for the orthogonal of different irreps
         print(5*"* ",' orthogonality[irreps] between different irreps')
         for i in range(1,len(self.irrep)):
@@ -572,6 +608,129 @@ class MBPGsubs(MBPG):
                                 print('multi:',imul,'of',self.irrep[i].label,'<-->','multi:',jmul,'of',self.irrep[j].label,\
                                 ' : ', isOrtho)
                                 print('')
+    # should execute after the self.diag_ham has been executed
+    def cal_degeneracy(self):
+        '''
+        aim : extract the information of degeneracy
+        '''
+        eng_flag  = 10000.0
+        deginfo_t = {} # 
+        deg_cnt   = 0 
+        for i in range(self.dim):
+            if np.abs(self.ham_eig[i]-eng_flag) < 1.0e-6:
+                degeneracy_cnt += 1
+                if i == self.dim -1 :
+                    deginfo_t['degeneracy'] = degeneracy_cnt
+                    self.deginfo.append(deginfo_t)
+            else:
+                deg_cnt += 1
+                if i > 0 :
+                    deginfo_t['degeneracy'] = int(degeneracy_cnt)
+                    self.deginfo.append(deginfo_t)
+                eng_flag = self.ham_eig[i]
+                deginfo_t['start'] = int(i)
+                deginfo_t['energy']   = self.ham_eig[i] 
+                degeneracy_cnt = 1
+        self.deg = deg_cnt 
+        # check the self-consistence:
+        if self.deg != len(self.deginfo):
+            raise ValueError("ERROR in PG.MBPGsubs.cal_degeneracy")
+        for i in range(self.deg):
+            deg_irreplabel = None
+            for j in range(self.deginfo[i]['start'],self.deginfo[i]['start']+self.deginfo[i]['degeneracy']):
+                for jj in range(self.dim):
+                    if np.abs(self.ham_evc[jj,2]) > 1.0e-3 : 
+                        deg_irreplabel = self.allbasis['irreplabel'][jj][0]
+                        self.deginfo[i]['irrep'] = copy.deepcopy(deg_irreplabel)
+                        break
+                if deg_irreplabel != None :
+                    break
+
+        
+
+    # decompose eigen wavefunction mixing irreps belongs to different columns of a irrep because of energy degeneracy
+    def decompose_degenerate(self):
+        '''
+        aim : decompose eigen wavefunction mixing irreps belongs to different columns of a irrep because of energy degeneracy
+        '''
+        self.ham_evc_decompose = copy.deepcopy(self.ham_evc)
+        for i in range(self.deg):
+            basis_list = []
+            for j in range(self.deginfo[i]['start'],self.deginfo[i]['start']+self.deginfo[i]['degeneracy']):
+                basis_list.append(self.ham_evc[:,j])
+            # decompose : 
+            # check whether its nonzero elements only lies in a single irreps space
+            # if yes : pass
+            # if no  : error
+            work_array  = np.transpose(np.array(basis_list))
+            print('the shape of work_array : ',work_array.shape)
+            irrep_t     = self.irrep[self.irrepindex[self.deginfo[i]['irrep']]] 
+            ibase = int(0)
+            for k in range(irrep_t.multi):
+                basis_array = np.array((irrep_t.dim,irrep_t.dim),dtype=np.complex128)
+                for icol in range(irrep_t.dim):
+                    for ideg in range(irrep_t.dim):
+                        basis_array[icol,ideg] = work_array[ibase+icol,ideg]
+                # judge whether the basis_array is reversible?
+                if np.linalg.det(basis_array) > 1e-3 :
+                    break
+                ibase = int(irrep_t.dim * (k+1))
+            work_array_new = np.dot(work_array,basis_array)
+            self.ham_evc_decompose[:,self.deginfo[i]['start'],self.deginfo[i]['start']+self.deginfo[i]['degeneracy']] =\
+                    copy.deepcopy(work_array_new[:,:])
+
+    def check_basis_irreps1(self):
+        '''
+        aim : check whether the nonzero elements only lies in a single irreps space and do not cross between different
+              irreps space
+        '''
+        print('CHECK: the degeneracy of irreps :')
+        len_sp = self.ham_evc.shape[0]
+        logic_list = []
+        for j in range(len_sp):
+            cnt_t   = 0
+            label_t = None
+            logic_t = True
+            for i in range(len_sp):
+                if np.abs(self.ham_evc[i,j]) > 1.0E-6:
+                    cnt_t += 1
+                    if label_t == None:
+                        label_t = self.allbasis['irreplabel'][i][0]
+                    else:
+                        if label_t != self.allbasis['irreplabel'][i][0]:
+                            logic_t = False
+            logic_list.append(logic_t)
+            print(5*' ','j =',j,'deg=',cnt_t,'logic:',logic_t,'label = ',label_t)
+        if all(logic_list) == True or logic_list == []:
+            print(20*'** ')
+            print(10*' ','* the basis only in a single irreps and can do the docomposition in energy degenerate space')
+            print(20*'** ')
+        else:
+            raise ValueError("ERROR in PG.MBPGsubs.check_basis_irreps1")
+
+
+    # check the structure of irreps of basis
+    def check_basis_irreps(self):
+        '''
+        aim : check whether the nonzero elements only lies in a single column of a single irreps space and do not cross between different
+              irreps space and different columns in a irreps.
+        '''
+        print('CHECK: the degeneracy of irreps :')
+        len_sp = self.ham_evc.shape[0]
+        for j in range(len_sp):
+            cnt_t   = 0
+            label_t = None
+            logic_t = True
+            for i in range(len_sp):
+                if np.abs(self.ham_evc[i,j]) > 1.0E-4:
+                    cnt_t += 1
+                    if label_t == None:
+                        label_t = self.allbasis['irreplabel'][i]
+                    else:
+                        if label_t != self.allbasis['irreplabel'][i]:
+                            logic_t = False
+            print(5*' ','j =',j,'deg=',cnt_t,'logic:',logic_t,'label = ',label_t)
+
 
     # this method is valid to use only in the case that the self.irrep.projectors() has been assigned
     def check_projectors(self):

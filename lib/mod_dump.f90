@@ -698,8 +698,8 @@
 
        do iatm= 1,a
            do iorb = 1,b
-               if(abs(mat(iatm,iorb)) .gt. prec_)then
-                   write(40,'(2i10,2(7X,f35.16))')iatm,iorb,real(mat(iatm,iorb)),aimag(mat(iatm,iorb))
+               if(abs(mat(iorb,iatm)) .gt. prec_)then
+                   write(40,'(2i10,2(7X,f35.16))')iorb,iatm,real(mat(iorb,iatm)),aimag(mat(iorb,iatm))
                endif
            enddo
        enddo

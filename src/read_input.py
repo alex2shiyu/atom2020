@@ -43,7 +43,9 @@ class Atom():
         self.space_group = int(space_group)
         self.vpm_type = vpm_type
         self.ncfgs    = None
-        self.totncfgs = None
+        self.totncfgs = None # 2^norb, set this value just because f2py can not coye with 2**norb as the dimension of
+                             # input parameters
+        self.onsite   = None
 
     @staticmethod
     def from_incar(incar_file = 'atom2020.incar',cemat_file='atom2020.cemat.in',amat_file='atom2020.amat.in'):
@@ -140,19 +142,23 @@ class Atom():
 
         if cfd == 'yes' :
             try : 
-                cfd_mat = read_2dc(norb,norb,cemat_file)
-                cfd_mat = tran_op(cfd_mat,amat)
+                cfd_mat_t = read_2dc(int(norb/2),int(norb/2),cemat_file)
+                spin_t = np.identity(2,dtype=np.complex128)
+                cfd_mat = np.kron(cfd_mat_t,spin_t)
+#               cfd_mat = tran_op(cfd_mat,amat)
                 return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_type)
             except IOError:
                 print("File:" + "\"" +cemat_file+ "\"" + " doesn't exist!")
         else : 
-            cfd_mat = None
+#           cfd_mat = None
+            cfd_mat = np.zeros((norb,norb),dtype=np.complex128)
             return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_type)
    
     def make_instance(self):
         self.make_ncfgs()
         self.check_incar()
         self.make_soc()
+        self.make_onsite()
         self.make_totncfgs()
         self.show_incar()
 
@@ -165,6 +171,12 @@ class Atom():
 #       '''
 #       return perm(10, 3, exact=True)
 
+    def make_onsite(self):
+        '''
+        I will sum atomic soc and cfd to onsite, both are on original basis
+        '''
+        self.onsite = self.soc_mat + self.cfd_mat
+    
     # this method will use the library of pylibwyl/wanntb
     def make_soc(self):
 # soc in complex basis 
@@ -174,9 +186,10 @@ class Atom():
 # soc in real orbitals(wannier90 orbitals order)
         soc_r = tran_op(soc_c,tmat)
 # soc in real natural basis(gutzwiller), need input transfrom matrix 
-        soc_r_natural = tran_op(soc_r,self.amat)
+#       soc_r_natural = tran_op(soc_r,self.amat)
 # assign attribute of instance 
-        self.soc_mat  = soc_r_natural
+#       self.soc_mat  = soc_r_natural
+        self.soc_mat  = soc_r
 
     def make_ncfgs(self):
         '''
@@ -243,5 +256,6 @@ class Atom():
         print('self.soc_val:\n',    self.soc_val)
         print('self.soc_mat:\n',    self.soc_mat)
         print('self.cfd_mat:\n',    self.cfd_mat)
+        print('self.onsite:\n',     self.onsite)
         print('self.point_group:\n',self.point_group)
         print('self.vpm_type:\n',   self.vpm_type)

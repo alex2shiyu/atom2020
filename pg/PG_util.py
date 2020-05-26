@@ -6,6 +6,19 @@ import os
 import sys
 import copy
 
+
+#def decompose_vec1(basis):
+#    '''
+#    aim : to decompose [[a11,a12,a13],[a21,a22,a23],[a31,a32,a33]]
+#              ------>  [[a'11, 0,  0],[  0,a'22, 0],[  0,  0,a'33]]
+#              where aij is one dimension vector
+#    '''
+#    if len(basis) == 1:
+#        return basis
+#    else:
+
+
+
 def RepBasisNorm(basis):
     '''
     normalize a basis for a certain rep which is actually a normalization of a vector

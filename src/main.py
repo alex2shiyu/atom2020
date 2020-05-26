@@ -1,7 +1,7 @@
 import numpy as np
 from src.read_input import Atom
 from module.atomic_stream import atomic_make_cumat,atomic_tran_cumat#(norbs, amtrx, cumat, cumat_t)
-from module.mod_dump import dump_4dc, dump_2dc
+from module.mod_dump import dump_4dc, dump_2dc, dump_1dr, dump_1dc
 from module.mod_read import read_4dc
 from module.atomic_hmat import atomic_make_hmtrx#(norbs, totncfgs, ncfgs, state, invcd, invsn, eimp, umat, hmat)
 from src.atomic_subs   import atomic_state, decide_unitary_len 
@@ -36,8 +36,7 @@ basis,invcd,invsn = atomic_make_basis(atom1.norb,atom1.totncfgs,atom1.ncfgs,atom
 
 # make hmat
 # (norbs, totncfgs, ncfgs, state, invcd, invsn, eimp, umat, hmat)
-hmat  =  atomic_make_hmtrx(atom1.norb,atom1.totncfgs,atom1.ncfgs,basis,invcd,invsn,atom1.cfd_mat,cumat_t)
-
+hmat  =  atomic_make_hmtrx(atom1.norb,atom1.totncfgs,atom1.ncfgs,basis,invcd,invsn,atom1.onsite,cumat_t)
 
 
 # make point group
@@ -56,8 +55,8 @@ Oprt_PG = TranOrb(dpg71.rep_vec,dpg71.rep_spin,npoly1,dim=dim1,npower=npower1,nf
 
 # <transform MRO into natural basis(MRN)>
 ##print('umat_so_original:',Oprt_PG.umat_so)
-#umat_so_natural = tran_op(Oprt_PG.umat_so, atom1.amat) #umat_so_natrual  transforms in rows
-umat_so_natural  = Oprt_PG.umat_so #umat_so_natrual  transforms in rows
+umat_so_natural = tran_op(Oprt_PG.umat_so, atom1.amat) #umat_so_natrual  transforms in rows
+#umat_so_natural  = Oprt_PG.umat_so #umat_so_natrual  transforms in rows
 
 
 #umat_so_natural = tran_unitary(Oprt_PG.umat_so,atom1.amat,transpose=True) 
@@ -66,6 +65,7 @@ umat_so_natural  = Oprt_PG.umat_so #umat_so_natrual  transforms in rows
 Basis_list = []
 sta = int(0)
 pg_manybody = MBPG(len(umat_so_natural),[])
+pg_manybody.dim = atom1.ncfgs
 for inn in range(atom1.nmin,atom1.nmax+1):
     print(40*'*')
     print('* nocc = ',inn)
@@ -88,18 +88,6 @@ for inn in range(atom1.nmin,atom1.nmax+1):
 # construct instance of Mb_Pg
 #   pg_manybody = MBPG(len(manybody_umat),manybody_umat)
 ##pg_manybody.show_attribute()
-    # _sp means <sub space>
-#   print('sta: ',sta,'len: ',len_sp)
-#   umat_sp  = []
-#   for iop in range(pg_manybody.nop):
-#   for iop in range(len(manybody_umat)):
-#       umat_tmp = pg_manybody.op[iop][sta:sta+len_sp,sta:sta+len_sp]
-#       umat_tmp = manybody_umat[iop]
-#       filename = 'test_opmatrx_'+str(iop+1)+'.dat'
-#       dump_2dc(umat_tmp.shape[0],umat_tmp.shape[1],umat_tmp,filename)
-#       print('umat.shape  :',umat_tmp.shape)
-#       print('trace <',iop+1,'>  :',np.trace(umat_tmp))
-#       umat_sp.append(umat_tmp)
 #   pg_mb_sp = MBPGsubs(pg_manybody.nop,umat_sp)
     print(5*' ',20*'* * ')
     print('     * I start to check the unitarity of operatros *')
@@ -107,18 +95,44 @@ for inn in range(atom1.nmin,atom1.nmax+1):
         print(10*' ',5*'- ')
         check_u_tmp = np.dot(np.transpose(np.conjugate(manybody_umat[iop])),manybody_umat[iop])
         print(10*' ','diagonal elements for iop =',iop)
-        print(check_u_tmp.diagonal())
+        if np.abs(np.sum(np.abs(check_u_tmp)) - check_u_tmp.shape[0]) < 1.0e-4:
+            print(10*' ','   it is a identity matrix : Pass')
+#       print(check_u_tmp.diagonal())
         print('')
     print(5*' ',20*' * * ')
 
     pg_mb_sp = MBPGsubs(len(manybody_umat),manybody_umat)
+    pg_mb_sp.dim = len_sp
+    pg_mb_sp.ham = hmat[sta:sta+len_sp,sta:sta+len_sp]
     pg_mb_sp.Cal_ReductRep(dpg71.irreps)
     pg_mb_sp.check_projectors()
     pg_mb_sp.collect_basis()#the eigenwaves arranges in rows
+    pg_mb_sp.trans_ham()
+    pg_mb_sp.diag_ham() 
+    pg_mb_sp.check_basis_irreps1()# should be executed before pg_mb_sp.cal_degeneracy()
+    pg_mb_sp.cal_degeneracy()
+    dump_1dr(len_sp,pg_mb_sp.ham_eig,path='eig_n_'+str(inn)+'.dat',prec=1.0e-6)
+    dump_2dc(len_sp,len_sp,pg_mb_sp.ham_evc,path='evc_n_'+str(inn)+'.dat',prec=1.0e-6)
     print(10*'* * ')
-    print('|*| final basis of irreps :\n',pg_mb_sp.allbasis['matrix'])
+#   print('|*| final basis of irreps :\n',pg_mb_sp.allbasis['matrix'])
     print('|*| the label of final basis of irreps :\n',pg_mb_sp.allbasis['irreplabel'])
     print(10*'* * ')
+#   pg_mb_sp.decompose_degenerate() 
+    pg_mb_sp.check_basis_irreps()
+#   print(5*' ','check for degeneracy of irreps :')
+#   for j in range(len_sp):
+#       cnt_t = 0
+#       label_t = None
+#       logic_t = True
+#       for i in range(len_sp):
+#           if np.abs(pg_mb_sp.ham_evc[i,j]) > 1.0E-6:
+#               cnt_t += 1
+#               if label_t == None:
+#                   label_t = pg_mb_sp.allbasis['irreplabel'][i]
+#               else:
+#                   if label_t != pg_mb_sp.allbasis['irreplabel'][i]:
+#                       logic_t = False
+#       print(5*' ','j =',j,'deg=',cnt_t,'logic:',logic_t,'label = ',label_t)
 
     for irr in pg_mb_sp.irrep:
         print(5*' ','characters:\n',irr.characters.real)

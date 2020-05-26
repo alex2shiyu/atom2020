@@ -1,0 +1,20 @@
+norb        14
+nmin        1
+nmax        1
+int_type    kanamori 
+int_val     5.0 3.2 0.9 0.9 0.9
+soc_type    f 
+soc_val     0.2410105
+cfd         yes
+gqn         5 
+point_group D2h
+space_group 71
+basis_tran  no
+vpm_type    1 
+
+#gqn:
+#1[pure]: n ;  
+#2[no soc, no cfd]: n, ps, s, sz, l, lz; 
+#3[soc, no cfd]: n, j, jz (double group of SO(3))
+#4[no soc, cdf]: n, s, sz, irrep of point group
+#5[soc, cfd]: n, irrep of double of point group
