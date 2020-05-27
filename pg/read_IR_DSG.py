@@ -91,9 +91,10 @@ class LittleGroup:  # little group at a special k point
             umat = np.array([[np.sqrt(3)/2,-0.5,0],[0,1.0,0],[0,0,1.0]],dtype=np.float64)
             for imat in self.rotC:
                 self.rotcar.append(np.dot(np.dot(np.linalg.inv(umat),np.transpose(imat)),umat))
-        if sgid in SGOrthP + SGOrthB2 + SGOrthB1 + SGOrthI + SGCubcI + SGOrthF + SGCubcF :
+        if sgid in SGOrthP + SGOrthB2 + SGOrthB1 + SGOrthI + SGCubcI + SGOrthF + SGCubcF + SGTetrI:
             for imat in self.rotC:
-                self.rotcar.append(np.transpose(imat))
+#               self.rotcar.append(np.transpose(imat))
+                self.rotcar.append(imat)
     def prim(self):
         # C : direct,     prim. lattices in conv.
         #   : reciprocal, conv. lattices in prim.

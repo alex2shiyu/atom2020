@@ -19,6 +19,7 @@ class Irrep:
         self.dim   = dim  # dimension of the representation
         self.matrices   = []  # representation matrices, ordered as the operations of the belonging group
         self.characters = []  # characters as a list, ordered the same as matrices
+        self.rank  = 0
 
     def cal_multi(self,rep):
         '''
@@ -359,7 +360,7 @@ class ReductRep(Irrep):
             for i in range(self.dim-1):
                 P_normal = np.zeros((dim_op,dim_op),dtype=np.complex128)
                 name = 'P' + str(i+1) + str(i)
-#               print(5*'** ','check for projectors matrix value : ')
+                print(5*'** ','check for projectors matrix value : ')
                 for j in range(self.nrank):
 #                   print(10*' ')
 #                   print('Projectors : j=',j)
@@ -368,6 +369,8 @@ class ReductRep(Irrep):
 #                   print('')
                     P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i+1,i])*op[j]
                 self.projector[name] = P_normal
+#       print('Pro name   :',name)
+        print('>>> Projectors  :',self.projector)
 
 
 
@@ -463,7 +466,13 @@ class DPG():
         for grp in lgrps:
             if grp.klabel == 'GM' :
                 self.nrank    = len(grp.rotC)
-                self.rep_vec  = [np.transpose(i) for i in grp.rotcar] # bilbao's data is transfromed in columns and we transpose it
+                self.rep_vec  =[np.transpose(i) for i in grp.rotcar] # I find the bilbao's data is also transfor in
+                                                         # columns, for example dsp#139, what ever grp.rotcar should be 
+                                                         # made sure transform in rows. Then why I need to transform it
+                                                         # using transpose, becasue we need R^(-1) not R, that is mean
+                                                         # that P_R f[r] = f[R^(-1) r]
+                                                         #----------------below is written down before
+                                                         # bilbao's data is transfromed in columns and we transpose it
                                                          # here but you should know when we use the manybody version of
                                                          # it to construct the projectors, we will use the form which
                                                          # transform in columns as same as the convention of group
@@ -532,7 +541,7 @@ class MBPGsubs(MBPG):
         self.irrepindex = {}
         self.ham_evc_decompose = []
    
-    def getirrepindex():
+    def getirrepindex(self):
         '''
         aim   : to get the index in self.irrep
         usage : self.irrepindex['GM1+'] = 0
@@ -543,8 +552,12 @@ class MBPGsubs(MBPG):
             self.irrepindex[ir.label] = int(cnt_t)
 
     # transfrom ham into basis of irreps after collecting bases
-    def trans_ham(self):
-        self.ham_irrep = tran_op(self.ham,np.transpose(np.array(self.allbasis['matrix'])))
+    def trans_ham(self,trans):
+        if trans :
+            self.ham_irrep = tran_op(self.ham,np.transpose(np.array(self.allbasis['matrix'])))
+        else :
+            self.ham_irrep = copy.deepcopy(self.ham)
+
 
     # diagonalize ham after transforming the hamiltonian into irreps bases
     def diag_ham(self):
@@ -614,8 +627,8 @@ class MBPGsubs(MBPG):
         aim : extract the information of degeneracy
         '''
         eng_flag  = 10000.0
-        deginfo_t = {} # 
         deg_cnt   = 0 
+        deginfo_t = {} # 
         for i in range(self.dim):
             if np.abs(self.ham_eig[i]-eng_flag) < 1.0e-6:
                 degeneracy_cnt += 1
@@ -627,13 +640,18 @@ class MBPGsubs(MBPG):
                 if i > 0 :
                     deginfo_t['degeneracy'] = int(degeneracy_cnt)
                     self.deginfo.append(deginfo_t)
+                deginfo_t = {} # 
                 eng_flag = self.ham_eig[i]
                 deginfo_t['start'] = int(i)
                 deginfo_t['energy']   = self.ham_eig[i] 
                 degeneracy_cnt = 1
+                if i == self.dim -1 :
+                    deginfo_t['degeneracy'] = degeneracy_cnt
+                    self.deginfo.append(deginfo_t)
         self.deg = deg_cnt 
         # check the self-consistence:
         if self.deg != len(self.deginfo):
+            print('self.deg = ',self.deg,'len(self.deginfo) = ',len(self.deginfo))
             raise ValueError("ERROR in PG.MBPGsubs.cal_degeneracy")
         for i in range(self.deg):
             deg_irreplabel = None
@@ -645,7 +663,8 @@ class MBPGsubs(MBPG):
                         break
                 if deg_irreplabel != None :
                     break
-
+        print('Degeneracy:  \n',self.deg)
+        print('Degeneracy:  \n',self.deginfo)
         
 
     # decompose eigen wavefunction mixing irreps belongs to different columns of a irrep because of energy degeneracy
@@ -656,28 +675,77 @@ class MBPGsubs(MBPG):
         self.ham_evc_decompose = copy.deepcopy(self.ham_evc)
         for i in range(self.deg):
             basis_list = []
+            cnt_dict = int(-1)
+            label_dict = {}
             for j in range(self.deginfo[i]['start'],self.deginfo[i]['start']+self.deginfo[i]['degeneracy']):
+                cnt_dict += 1
                 basis_list.append(self.ham_evc[:,j])
+                label_dict[str(cnt_dict)] = j
+
+            work_array  = np.transpose(np.array(basis_list))
+            print('Deg(from 0)             : ', i)
+#           print('the shape of work_array : ',work_array.shape)
+
+            len_sp = self.ham_evc.shape[0]
+            logic_list = []
+            cnt_list = []
+            for jj in range(len(basis_list)): 
+#               print('IMPORTANT CHECK : ',basis_list[jj][0:5])
+                print('     band index : ',label_dict[str(jj)])
+                label_t = None
+                logic_t = True
+                cnt_t   = 0
+                for ii in range(len_sp):
+                    if np.abs(basis_list[jj][ii]) > 1.0E-5:
+                        cnt_t += 1
+                        if label_t == None:
+                            label_t = self.allbasis['irreplabel'][ii]
+                        else:
+                            if label_t != self.allbasis['irreplabel'][ii]:
+                                logic_t = False
+                logic_list.append(logic_t)
+                cnt_list.append(cnt_t)
+            print('logical                 : ',logic_list,'  Deg: ',cnt_list)
             # decompose : 
             # check whether its nonzero elements only lies in a single irreps space
             # if yes : pass
             # if no  : error
-            work_array  = np.transpose(np.array(basis_list))
-            print('the shape of work_array : ',work_array.shape)
             irrep_t     = self.irrep[self.irrepindex[self.deginfo[i]['irrep']]] 
-            ibase = int(0)
-            for k in range(irrep_t.multi):
-                basis_array = np.array((irrep_t.dim,irrep_t.dim),dtype=np.complex128)
-                for icol in range(irrep_t.dim):
-                    for ideg in range(irrep_t.dim):
-                        basis_array[icol,ideg] = work_array[ibase+icol,ideg]
-                # judge whether the basis_array is reversible?
-                if np.linalg.det(basis_array) > 1e-3 :
-                    break
-                ibase = int(irrep_t.dim * (k+1))
-            work_array_new = np.dot(work_array,basis_array)
-            self.ham_evc_decompose[:,self.deginfo[i]['start'],self.deginfo[i]['start']+self.deginfo[i]['degeneracy']] =\
-                    copy.deepcopy(work_array_new[:,:])
+            if irrep_t.dim > 1:
+                if not all(logic_list) :
+                    ibase = int(0)
+                    find_label = False
+                    for k in range(irrep_t.multi):
+                        basis_array = np.zeros((irrep_t.dim,irrep_t.dim),dtype=np.complex128)
+                        for icol in range(irrep_t.dim):
+                            for ideg in range(irrep_t.dim):
+                                basis_array[icol,ideg] = work_array[ibase+icol,ideg]
+                        # judge whether the basis_array is reversible?
+                        if np.linalg.det(basis_array) > 1e-3 :
+                            find_label = True
+                            print(">>> index for multi of basis decomposition(from 0) :",k)
+                            break
+                        elif k == irrep_t.multi -1 :
+                            print(">>> index for multi of basis decomposition(from 0) : Failed")
+                            raise ValueError(">>> Can not find proper matrix to decompose")
+                        ibase = int(irrep_t.dim * (k+1))
+                    if find_label :
+                        print('>>> decomposition matrix original :\n',basis_array)
+                        print('>>> decomposition matrix :\n',np.linalg.inv(basis_array))
+                        work_array_new = np.dot(work_array,np.linalg.inv(basis_array))
+                    self.ham_evc_decompose[:,self.deginfo[i]['start']:self.deginfo[i]['start']+self.deginfo[i]['degeneracy']] =\
+                            copy.deepcopy(work_array_new[:,:])
+                else :
+                    print(">>> basis decomposition(from 0) : no Need(True for not mixing between different columns)")
+                    print(">>>   order of degeneracy space :", i)
+                    self.ham_evc_decompose[:,self.deginfo[i]['start']:self.deginfo[i]['start']+self.deginfo[i]['degeneracy']] =\
+                            copy.deepcopy(work_array[:,:])
+
+            elif irrep_t.dim == 1:
+                print(">>> basis decomposition(from 0) : no Need(1D irrep)")
+                self.ham_evc_decompose[:,self.deginfo[i]['start']:self.deginfo[i]['start']+self.deginfo[i]['degeneracy']] =\
+                        copy.deepcopy(work_array[:,:])
+        self.ham_evc = copy.deepcopy(self.ham_evc_decompose)
 
     def check_basis_irreps1(self):
         '''
@@ -718,11 +786,13 @@ class MBPGsubs(MBPG):
         print('CHECK: the degeneracy of irreps :')
         len_sp = self.ham_evc.shape[0]
         for j in range(len_sp):
+#           print('IMPORTANT CHECK : ',self.ham_evc[0:5,j])
+            print('             band index : ',j)
             cnt_t   = 0
             label_t = None
             logic_t = True
             for i in range(len_sp):
-                if np.abs(self.ham_evc[i,j]) > 1.0E-4:
+                if np.abs(self.ham_evc[i,j]) > 1.0E-5:
                     cnt_t += 1
                     if label_t == None:
                         label_t = self.allbasis['irreplabel'][i]

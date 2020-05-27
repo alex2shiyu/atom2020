@@ -1,14 +1,14 @@
-norb        14
-nmin        2
-nmax        2
+norb        10
+nmin        1
+nmax        1
 int_type    kanamori 
 int_val     5.0 3.2 0.9 0.9 0.9
-soc_type    f 
-soc_val     0.2410105
+soc_type    d 
+soc_val     0.248265
 cfd         yes
 gqn         5 
-point_group D2h
-space_group 71
+point_group D4h
+space_group 139
 basis_tran  no
 vpm_type    1 
 

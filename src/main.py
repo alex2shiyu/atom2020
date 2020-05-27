@@ -46,12 +46,12 @@ dpg71 = DPG(atom1.point_group,pgid)
 sgid  = atom1.space_group 
 dpg71.get_data(sgid)
 #dpg71.groupclass_irrep()
-#dpg71.show_attribute()
+dpg71.show_attribute()
  
 # <make matrix representation(MRO: MROrb) in d f orbitals space> 
 npoly1, dim1, npower1, nfunc1 = get_TranOrb_param(atom1.soc_type)
 Oprt_PG = TranOrb(dpg71.rep_vec,dpg71.rep_spin,npoly1,dim=dim1,npower=npower1,nfunc=nfunc1,shell=atom1.soc_type)
-#Oprt_PG.show_attribute() if test else 0
+Oprt_PG.show_attribute() if test else 0
 
 # <transform MRO into natural basis(MRN)>
 ##print('umat_so_original:',Oprt_PG.umat_so)
@@ -89,6 +89,7 @@ for inn in range(atom1.nmin,atom1.nmax+1):
 #   pg_manybody = MBPG(len(manybody_umat),manybody_umat)
 ##pg_manybody.show_attribute()
 #   pg_mb_sp = MBPGsubs(pg_manybody.nop,umat_sp)
+    print('>>>> check manybody unitary matrix :\n',manybody_umat)
     print(5*' ',20*'* * ')
     print('     * I start to check the unitarity of operatros *')
     for iop in range(len(manybody_umat)) :
@@ -105,19 +106,28 @@ for inn in range(atom1.nmin,atom1.nmax+1):
     pg_mb_sp.dim = len_sp
     pg_mb_sp.ham = hmat[sta:sta+len_sp,sta:sta+len_sp]
     pg_mb_sp.Cal_ReductRep(dpg71.irreps)
+    for ir in pg_mb_sp.irrep :
+        if ir.label == 'GM6d' :
+            pro = np.zeros((10,10),dtype=np.complex128)
+            for irank in range(32):
+                pro += ir.dim/ir.nrank * np.conjugate(ir.matrices[irank][1,0])*manybody_umat[irank]
+            print("Check Pro(main) :\n",pro)
     pg_mb_sp.check_projectors()
     pg_mb_sp.collect_basis()#the eigenwaves arranges in rows
-    pg_mb_sp.trans_ham()
+    pg_mb_sp.trans_ham(trans=True)
     pg_mb_sp.diag_ham() 
-    pg_mb_sp.check_basis_irreps1()# should be executed before pg_mb_sp.cal_degeneracy()
-    pg_mb_sp.cal_degeneracy()
     dump_1dr(len_sp,pg_mb_sp.ham_eig,path='eig_n_'+str(inn)+'.dat',prec=1.0e-6)
     dump_2dc(len_sp,len_sp,pg_mb_sp.ham_evc,path='evc_n_'+str(inn)+'.dat',prec=1.0e-6)
+    pg_mb_sp.check_basis_irreps1()# should be executed before pg_mb_sp.cal_degeneracy()
+    pg_mb_sp.check_basis_irreps()
+    pg_mb_sp.cal_degeneracy()
     print(10*'* * ')
 #   print('|*| final basis of irreps :\n',pg_mb_sp.allbasis['matrix'])
     print('|*| the label of final basis of irreps :\n',pg_mb_sp.allbasis['irreplabel'])
     print(10*'* * ')
-#   pg_mb_sp.decompose_degenerate() 
+    pg_mb_sp.decompose_degenerate() 
+    dump_1dr(len_sp,pg_mb_sp.ham_eig,path='eig_n_'+str(inn)+'_after.dat',prec=1.0e-6)
+    dump_2dc(len_sp,len_sp,pg_mb_sp.ham_evc,path='evc_n_'+str(inn)+'_after.dat',prec=1.0e-6)
     pg_mb_sp.check_basis_irreps()
 #   print(5*' ','check for degeneracy of irreps :')
 #   for j in range(len_sp):
