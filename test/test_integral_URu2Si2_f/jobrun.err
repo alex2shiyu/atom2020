@@ -4,11 +4,9 @@ which: no manpath in (/share/home/pengsy/soft/intel-install/compilers_and_librar
 /share/home/pengsy/.bashrc: line 3: warning: setlocale: LC_CTYPE: cannot change locale (en_US.UTF-8): No such file or directory
 /share/home/pengsy/.bashrc: line 3: warning: setlocale: LC_CTYPE: cannot change locale (en_US.UTF-8)
 Python 3.6.9 :: Anaconda, Inc.
-/share/home/pengsy/work/atom2020/pg/PG_util.py:31: RuntimeWarning: invalid value encountered in true_divide
-  tmp_list.append(iba/np.linalg.norm(iba))
 Traceback (most recent call last):
-  File "/share/home/pengsy/work/atom2020/src/main.py", line 121, in <module>
+  File "/share/home/pengsy/work/atom2020/src/main.py", line 120, in <module>
     pg_mb_sp.check_basis_irreps1()# should be executed before pg_mb_sp.cal_degeneracy()
-  File "/share/home/pengsy/work/atom2020/pg/PG.py", line 777, in check_basis_irreps1
+  File "/share/home/pengsy/work/atom2020/pg/PG.py", line 865, in check_basis_irreps1
     raise ValueError("ERROR in PG.MBPGsubs.check_basis_irreps1")
 ValueError: ERROR in PG.MBPGsubs.check_basis_irreps1

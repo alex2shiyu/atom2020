@@ -4,3 +4,7 @@ which: no manpath in (/share/home/pengsy/soft/intel-install/compilers_and_librar
 /share/home/pengsy/.bashrc: line 3: warning: setlocale: LC_CTYPE: cannot change locale (en_US.UTF-8): No such file or directory
 /share/home/pengsy/.bashrc: line 3: warning: setlocale: LC_CTYPE: cannot change locale (en_US.UTF-8)
 Python 3.6.9 :: Anaconda, Inc.
+Traceback (most recent call last):
+  File "/share/home/pengsy/work/atom2020/src/main.py", line 113, in <module>
+    pro += ir.dim/ir.nrank * np.conjugate(ir.matrices[irank][0,0])*manybody_umat[irank]
+ValueError: operands could not be broadcast together with shapes (10,10) (91,91) (10,10) 

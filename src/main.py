@@ -33,7 +33,7 @@ cumat_t = atomic_tran_cumat(atom1.norb,atom1.amat,cumat)
 nstat = atomic_state(atom1.norb)
 print('nstat=\n',nstat) if test else 0
 basis,invcd,invsn = atomic_make_basis(atom1.norb,atom1.totncfgs,atom1.ncfgs,atom1.norb,atom1.nmin,atom1.nmax,nstat)
-
+print('basis:\n',basis)
 # make hmat
 # (norbs, totncfgs, ncfgs, state, invcd, invsn, eimp, umat, hmat)
 hmat  =  atomic_make_hmtrx(atom1.norb,atom1.totncfgs,atom1.ncfgs,basis,invcd,invsn,atom1.onsite,cumat_t)
@@ -51,6 +51,7 @@ dpg71.show_attribute()
 # <make matrix representation(MRO: MROrb) in d f orbitals space> 
 npoly1, dim1, npower1, nfunc1 = get_TranOrb_param(atom1.soc_type)
 Oprt_PG = TranOrb(dpg71.rep_vec,dpg71.rep_spin,npoly1,dim=dim1,npower=npower1,nfunc=nfunc1,shell=atom1.soc_type)
+Oprt_PG.check_symm_crystal(atom1.cfd_mat)
 Oprt_PG.show_attribute() if test else 0
 
 # <transform MRO into natural basis(MRN)>
@@ -72,6 +73,7 @@ for inn in range(atom1.nmin,atom1.nmax+1):
     len_sp   = int(comb(atom1.norb,inn))
 
     basis1,invcd1,invsn1 = atomic_make_basis(atom1.norb,atom1.totncfgs,len_sp,atom1.norb,inn,inn,nstat)
+    print('basis1:\n',basis1)
     manybody_umat   = []
     unitary_len = perm(atom1.norb, inn, exact=True)
 #   unitary_len =  decide_unitary
@@ -89,32 +91,29 @@ for inn in range(atom1.nmin,atom1.nmax+1):
 #   pg_manybody = MBPG(len(manybody_umat),manybody_umat)
 ##pg_manybody.show_attribute()
 #   pg_mb_sp = MBPGsubs(pg_manybody.nop,umat_sp)
-    print('>>>> check manybody unitary matrix :\n',manybody_umat)
-    print(5*' ',20*'* * ')
-    print('     * I start to check the unitarity of operatros *')
-    for iop in range(len(manybody_umat)) :
-        print(10*' ',5*'- ')
-        check_u_tmp = np.dot(np.transpose(np.conjugate(manybody_umat[iop])),manybody_umat[iop])
-        print(10*' ','diagonal elements for iop =',iop)
-        if np.abs(np.sum(np.abs(check_u_tmp)) - check_u_tmp.shape[0]) < 1.0e-4:
-            print(10*' ','   it is a identity matrix : Pass')
-#       print(check_u_tmp.diagonal())
-        print('')
-    print(5*' ',20*' * * ')
 
     pg_mb_sp = MBPGsubs(len(manybody_umat),manybody_umat)
     pg_mb_sp.dim = len_sp
     pg_mb_sp.ham = hmat[sta:sta+len_sp,sta:sta+len_sp]
+    pg_mb_sp.check_symm_ham()
     pg_mb_sp.Cal_ReductRep(dpg71.irreps)
     for ir in pg_mb_sp.irrep :
-        if ir.label == 'GM6d' :
+        if ir.label == 'GM5d' :
             pro = np.zeros((10,10),dtype=np.complex128)
-            for irank in range(32):
-                pro += ir.dim/ir.nrank * np.conjugate(ir.matrices[irank][1,0])*manybody_umat[irank]
+            for irank in range(8):
+                pro += ir.dim/ir.nrank * np.conjugate(ir.matrices[irank][0,0])*manybody_umat[irank]
             print("Check Pro(main) :\n",pro)
     pg_mb_sp.check_projectors()
     pg_mb_sp.collect_basis()#the eigenwaves arranges in rows
+    pg_mb_sp.check_irrepbasis_final()
+#test
+#   pg_mb_sp.trans_ham(trans=False)
+#   pg_mb_sp.diag_ham() 
+#   dump_1dr(len_sp,pg_mb_sp.ham_eig,path='eig_n_before_tran_'+str(inn)+'.dat',prec=1.0e-6)
+#   dump_2dc(len_sp,len_sp,pg_mb_sp.ham_evc,path='evc_n_before_tran_'+str(inn)+'.dat',prec=1.0e-6)
+#test
     pg_mb_sp.trans_ham(trans=True)
+    dump_2dc(len_sp,len_sp,pg_mb_sp.ham_irrep,path='ham_irrepbasis_'+str(inn)+'.dat',prec=1.0e-6)
     pg_mb_sp.diag_ham() 
     dump_1dr(len_sp,pg_mb_sp.ham_eig,path='eig_n_'+str(inn)+'.dat',prec=1.0e-6)
     dump_2dc(len_sp,len_sp,pg_mb_sp.ham_evc,path='evc_n_'+str(inn)+'.dat',prec=1.0e-6)

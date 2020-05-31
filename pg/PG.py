@@ -5,10 +5,11 @@ import pickle as pk
 from wanntb.tran import tran_op
 import os
 import sys
-from pg.PG_util import pmutt, decompose_vec, RepBasisNorm, isOrthogonal, isindependent
+from pg.PG_util import pmutt, decompose_vec, RepBasisNorm, isOrthogonal, isindependent,find_rep
 from pg.read_IR_DSG import loadIR 
 import copy
 from pg.gramSchmidt import GramSchmidt
+from module.mod_dump import dump_4dc, dump_2dc, dump_1dr, dump_1dc
 
 class Irrep:
     '''
@@ -82,7 +83,9 @@ class ReductRep(Irrep):
         vectors_normortho = []
         vectors_new_all = []
         for i in range(self.dim):
+            print('basis before norm :\n',vectors_new[i])
             vectors_normortho_t = RepBasisNorm(list(vectors_new[i]))
+            print('basis before norm :\n',vectors_normortho_t)
             vectors_new_all += list(vectors_normortho_t)
             vectors_normortho.append(vectors_normortho_t)
        
@@ -90,7 +93,11 @@ class ReductRep(Irrep):
         print(' ')
         print(10*'* * ')
         print(5*' ','>>> orthogonality[all] of the whole newly produced basis of the irrep ...')
-        is_allortho = isOrthogonal(vectors_new_all,vectors_new_all) 
+        vectors_new_all_copy = copy.deepcopy(vectors_new_all)
+        print('check before entering isOrthogonal :\n')
+        print('                   vectors_new_all :',vectors_new_all)
+        print('                   vectors_new_all_copy :',vectors_new_all_copy)
+        is_allortho = isOrthogonal(vectors_new_all,vectors_new_all_copy) 
         print(5*' ','All is Orthogonal ?   ',is_allortho)
 
         
@@ -191,7 +198,7 @@ class ReductRep(Irrep):
             print('')
             print('')
             print(20*'=')
-            print('* * imul :',imul+1)
+            print('* * imul :',imul)
             phi_t1 = self.make_phi1(imul,op[0].shape[0],irrep_prev)
             print(20*'- -') 
             print('* WAVE(phi1) Done :  of multi<',imul,'> of <',self.label,'> is :',np.linalg.norm(phi_t1))
@@ -230,8 +237,8 @@ class ReductRep(Irrep):
         '''
         label_list = []
         name_ip = 'P00'
+        isindependt_all = []
         for i in range(ndim):
-            label_list_tmp = []
             print("\n",10*'*','\n',2*'* ','i :',i)
             func_all    = np.zeros(ndim,dtype=np.complex128)
             func_all[i] = complex(1.0)
@@ -239,44 +246,75 @@ class ReductRep(Irrep):
             print("\n",'. . . . . . . . . ','\n','i(P_ii)=',0,'|','\n','. . . . . . . . . ')
             Proj    = self.projector[name_ip]
             func_1  = np.einsum('ij,i->j',Proj,func_all)
-            if np.sum(np.abs(func_1)) > 1.0e-4:
+            # to make sure phi2 = P10 phi1 has nonzero element
+            if self.dim > 1 :
+                phi2 = self.make_phi_other(func_1,multi_now)
+                if np.sum(np.abs(phi2)) > 1e-2 :
+                    phi2_flag = True
+                else:
+                    phi2_flag = False
+            else :
+                phi2_flag  = True 
+            if np.sum(np.abs(func_1)) > 1.0e-4 and phi2_flag:
                 func_1  = RepBasisNorm(func_1) 
                 isindependt_all = []
+                basis_set = []
                 print(5*'- ','\n','   check independence ...')
-                if int(multi_now) > 0 or len(irrep_prev) > 0 :
-                    print('multi_now(from 0) =',multi_now,'/',self.multi,'  ','num of irrep_prev :',len(irrep_prev))
-                    print(5*'- ')
-                    if int(multi_now) > 0 :
-                        print('')
-                        basis_set = []
-                        for imul in range(multi_now):
-                            print('   independent:  multi(from 0)=',imul,'multi(now)=',multi_now)
-                            mul_name  = 'multi' + str(imul)
-                            basis_set += self.basis[mul_name]
-                        label_t, independt   = isindependent(func_1,basis_set) 
-                        isindependt_all += independt
-                        label_list_tmp += label_t
-                    if len(irrep_prev) > 0 :
-                        for irr in irrep_prev :
-                            if irr.multi > 0:
-                                for imul in range(irr.multi):
-                                    print('   independent:  multi(from 0)=',imul,'/',irr.multi)
-                                    mul_name = 'multi' + str(imul)
-                                    basis_set = irr.basis[mul_name]
-                                    label_t, independt   = isindependent(func_1,basis_set) 
-                                    isindependt_all += independt
-                                    label_list_tmp += label_t
-                    label_list.append(np.sum(np.abs(np.array(label_list_tmp))))
-                else:
-#                   return [func_1]
+                if int(multi_now) > 0 :
+                    for imul in range(multi_now):
+                        mul_name  = 'multi' + str(imul)
+                        basis_set += self.basis[mul_name]
+                if len(irrep_prev) > 0:
+                    for irr in irrep_prev :
+                        if irr.multi > 0 :
+                            for imul in range(irr.multi):
+                                mul_name = 'multi' + str(imul)
+                                basis_set += irr.basis[mul_name]
+                if basis_set == [] :
                     print(5*'  ','NO NEED : because imul=',multi_now,'len(irrep_prev)=',len(irrep_prev))
                     label_list.append(np.sum(np.abs(func_1)))
+                    isindependt_all += [True]
+                else :
+                    label_t, independt   = isindependent(func_1,basis_set) 
+                    isindependt_all += independt
+                    if not independt :
+                        label_list.append(float(0.0))
+                    else :
+                        label_list.append(np.sum(np.abs(np.array(label_t))))
+#               if int(multi_now) > 0 or len(irrep_prev) > 0 :
+#                   print('multi_now(from 0) =',multi_now,'/',self.multi,'  ','num of irrep_prev :',len(irrep_prev))
+#                   print(5*'- ')
+#                   if int(multi_now) > 0 :
+#                       print('')
+#                       basis_set = []
+#                       for imul in range(multi_now):
+#                           print('   independent:  multi(from 0)=',imul,'multi(now)=',multi_now)
+#                           mul_name  = 'multi' + str(imul)
+#                           basis_set += self.basis[mul_name]
+#                       label_t, independt   = isindependent(func_1,basis_set) 
+#                       isindependt_all += independt
+#                       label_list_tmp += label_t
+#                   if len(irrep_prev) > 0 :
+#                       for irr in irrep_prev :
+#                           if irr.multi > 0:
+#                               for imul in range(irr.multi):
+#                                   print('   independent:  multi(from 0)=',imul,'/',irr.multi)
+#                                   mul_name = 'multi' + str(imul)
+#                                   basis_set = irr.basis[mul_name]
+#                                   label_t, independt   = isindependent(func_1,basis_set) 
+#                                   isindependt_all += independt
+#                                   label_list_tmp += label_t
+#                   label_list.append(min(np.sum(np.abs(np.array(label_list_tmp))),))
+#               else:
+#                   print(5*'  ','NO NEED : because imul=',multi_now,'len(irrep_prev)=',len(irrep_prev))
+#                   label_list.append(np.sum(np.abs(func_1)))
             else:
+                isindependt_all += [False]
                 label_list.append(float(0.0))
         
         pos_target = label_list.index(max(label_list))
         print(10*'*-')
-        print('* the proper phi for phi1 of mulit=',multi_now,'of irreps ',self.label,'is',pos_target+1)
+        print('* the proper phi for phi1 of mulit=',multi_now,'of irreps ',self.label,'is',pos_target)
         print(10*'*-')
         func_all    = np.zeros(ndim,dtype=np.complex128)
         func_all[pos_target] = complex(1.0)
@@ -311,7 +349,8 @@ class ReductRep(Irrep):
         '''
         basis_other = []
         for i in range(self.dim-1):
-            name_proj = 'P' + str(i+1) + str(i)
+#           name_proj = 'P' + str(i+1) + str(i)
+            name_proj = 'P' + str(i) + str(i+1)
             proj      = self.projector[name_proj]
 #           basis_t   = np.dot(proj,phi_1)
             basis_t   = np.einsum('ij,i->j',proj,phi_1)
@@ -430,7 +469,7 @@ class DPG():
     def groupclass_irrep(self):
         self.gen_pos = np.array([0,1,2,3,4,5,6,7,8,12],dtype=np.int32)
         self.gen_mul = np.array([1,2,2,2,1,2,2,2,1,1],dtype=np.int32)
-        self.nclass = len(self.gen_pos)
+        self.nclass  = len(self.gen_pos)
         for ir in self.irreps:
             irr = Irrep()
             irr.label = ir.label
@@ -445,6 +484,8 @@ class DPG():
             irr.characters =np.array(character_reduce)
             self.irreps_class.append(irr)
 
+        
+        
 
     def def_mb_byhand(self,case='f'):
         if case == 'f' :
@@ -466,8 +507,8 @@ class DPG():
         for grp in lgrps:
             if grp.klabel == 'GM' :
                 self.nrank    = len(grp.rotC)
-                self.rep_vec  =[np.transpose(i) for i in grp.rotcar] # I find the bilbao's data is also transfor in
-                                                         # columns, for example dsp#139, what ever grp.rotcar should be 
+                self.rep_vec  =[np.transpose(np.conjugate(i)) for i in grp.rotcar] # I find the bilbao's data is also transfor in
+                                                         # rows, for example dsp#139, what ever grp.rotcar should be 
                                                          # made sure transform in rows. Then why I need to transform it
                                                          # using transpose, becasue we need R^(-1) not R, that is mean
                                                          # that P_R f[r] = f[R^(-1) r]
@@ -551,9 +592,28 @@ class MBPGsubs(MBPG):
             cnt_t += 1
             self.irrepindex[ir.label] = int(cnt_t)
 
+
+    # check the invariant of hamiltonian 
+    def check_symm_ham(self):
+        ham_new = np.zeros((self.dim,self.dim),dtype=np.complex128)
+        for iop in range(self.nop):
+            ham_new += np.dot(np.conjugate(np.transpose(self.op[iop])),np.dot(self.ham,self.op[iop]))
+        ham_new = ham_new / float(self.nop)
+
+        error = np.sum(np.abs(self.ham - ham_new))
+        if error > 1.0e-6 :
+            dump_2dc(self.dim,self.dim,ham_new,path='ham_new.dat',prec=1.0e-6)
+            dump_2dc(self.dim,self.dim,self.ham,path='ham.dat',prec=1.0e-6)
+            dump_2dc(self.dim,self.dim,self.ham - ham_new,path='ham_diff.dat',prec=1.0e-6)
+            raise ValueError('error in check_symm_ham and error value : ',error)
+        else :
+            print('Check for the symmetry of hamiltonian :',error)
+
+
     # transfrom ham into basis of irreps after collecting bases
     def trans_ham(self,trans):
         if trans :
+            print('Check : the transformation matrix(basis matrix) in rows :\n',self.allbasis['matrix'])
             self.ham_irrep = tran_op(self.ham,np.transpose(np.array(self.allbasis['matrix'])))
         else :
             self.ham_irrep = copy.deepcopy(self.ham)
@@ -583,7 +643,7 @@ class MBPGsubs(MBPG):
             irr = ReductRep()
             irr.label = copy.deepcopy(ir.label)
             irr.dim   = copy.deepcopy(ir.dim)
-            irr.matrices   = copy.deepcopy(ir.matrices)
+            irr.matrices   = copy.deepcopy(ir.matrices) #[np.transpose(imat) for imat in ir.matrices]
             irr.characters = copy.deepcopy(ir.characters)
             print('>>>>> irrep :',irr.label)
             irr.multi      = irr.cal_multi(self.op)
@@ -665,7 +725,35 @@ class MBPGsubs(MBPG):
                     break
         print('Degeneracy:  \n',self.deg)
         print('Degeneracy:  \n',self.deginfo)
-        
+       
+    def check_irrepbasis_final(self):
+        '''
+        aim : check whether it's the basis of irreps which we want after all 
+              bases have been found.
+        '''
+        isTrue = []
+        print(20*'**')
+        print('')
+        print(' * Check for bases of irreps ')
+        print('')
+        for ir in self.irrep :
+            if ir.multi > 0:
+                for imul in range(ir.multi):
+                    name      = 'multi' + str(imul)
+                    rep_ir_imul = []
+                    basis_set = ir.basis[name]
+                    error = float(0.0)
+                    for iop in range(self.nop):
+                        op = np.transpose(self.op[iop])
+                        rep_matrix  = find_rep(basis_set,op) 
+                        rep_ir_imul.append(rep_matrix)
+                        error = np.sum(np.abs(rep_matrix - ir.matrices[iop]))
+                        if np.abs(error) > 1.0e-6:
+                            print('Error : ir=',ir.label,'imul=',imul,'iop',iop,'character:',ir.matrices[iop],'rep',rep_matrix,' error =',error)
+                            print('   op:\n',op)
+                            print('   basis_set:\n',basis_set)
+        print(20*'**')
+                    
 
     # decompose eigen wavefunction mixing irreps belongs to different columns of a irrep because of energy degeneracy
     def decompose_degenerate(self):
@@ -907,8 +995,8 @@ class TranOrb():
         self.mapbasis  = {}
         self.nop       = len(self.umat)
         self.vec_oldbasis = None
-        self.umat_new   = [] # the resulting matrix transforms in rows, should be noticed when using it
-        self.umat_so    = []
+        self.umat_new     = [] # the resulting matrix transforms in rows, should be noticed when using it
+        self.umat_so      = [] # also in rows
         
         assert self.shell in ['s','p','t2g','d','f'],   "I can not recognize shell"
         assert self.dim > 0, "dim should great than zero as input of tran_orbital"
@@ -929,6 +1017,25 @@ class TranOrb():
             mat = np.kron(self.umat_new[i],self.su2[i])
             self.umat_so.append(mat)
 
+    def check_symm_crystal(self,crystal_matrix):
+        nop = int(self.nfunc)
+        crystal_new = np.zeros((nop,nop),dtype=np.complex128)
+        print('nop:\n',nop)
+        print('self.umat_new:\n',self.umat_new[0].shape)
+        print('crystal_matrix:\n',crystal_matrix.shape)
+        for i in range(nop):
+            # note rep_vec is R^{-1}
+            crystal_new += np.dot(np.conjugate(self.umat_new[i]),np.dot(crystal_matrix[0:2*nop:2,0:2*nop:2],np.transpose(self.umat_new[i])))
+        crystal_new = crystal_new / float(nop)
+
+        error = np.sum(np.abs(crystal_matrix[0:2*nop:2,0:2*nop:2] - crystal_new))
+        if error > 1.0e-6 :
+            dump_2dc(nop,nop,crystal_new,path='cfd_new.dat',prec=1.0e-6)
+            dump_2dc(nop,nop,crystal_matrix[0:2*nop:2,0:2*nop:2],path='cfd.dat',prec=1.0e-6)
+            dump_2dc(nop,nop,crystal_matrix[0:2*nop:2,0:2*nop:2] - crystal_new,path='cfd_diff.dat',prec=1.0e-6)
+            raise ValueError('error in check_symm_crystal and error value : ',error)
+        else :
+            print('Check for the symmetry of crystal :',error)
 
     def show_attribute(self):
         print('dim=',self.dim)
