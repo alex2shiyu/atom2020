@@ -7,6 +7,33 @@ import sys
 import copy
 
 
+def check_ham_wave(ham,eig,wave):
+    '''
+    aim : check whether the three inputs are consistent with each other.
+    input : 
+            ham  : 2d numpy.ndarray 
+            eig  : 1d numpy.ndarray
+            wave : 2d numpy.ndarray with "i"th columns corrosponding to "i"th eigen 
+    '''
+    print('check eigenfunctions :\n')
+    dim = ham.shape[0]
+    istrue = [True]
+    for j in range(dim):
+        for i in range(dim):
+            wave_new = np.einsum('ij,j->i',ham,wave[:,j])
+            value    = np.dot(np.conjugate(wave[:,i]),wave_new)
+            if i == j  and np.abs(eig[j] - value) < 1.0e-10:
+                istrue.append(True)
+            elif i != j and np.abs(value) < 1.0e-10:
+                istrue.append(True)
+            else:
+                print(5*' ','<',i,'|',j,'> =',value)
+                istrue.append(False)
+    if all(istrue) :
+        print(5*' ','success')
+    else :
+        print(5*' ','failed')
+
 #def decompose_vec1(basis):
 #    '''
 #    aim : to decompose [[a11,a12,a13],[a21,a22,a23],[a31,a32,a33]]
@@ -52,6 +79,7 @@ def find_rep(basis,op):
     if not all(is_close):
         raise ValueError('ERROR: basis is not complete : ', error)
     else:
+        print('<find_rep> success in <check_irrepbasis_final>')
         return rep
 
 

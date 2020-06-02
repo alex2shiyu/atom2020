@@ -5,7 +5,7 @@ import pickle as pk
 from wanntb.tran import tran_op
 import os
 import sys
-from pg.PG_util import pmutt, decompose_vec, RepBasisNorm, isOrthogonal, isindependent,find_rep
+from pg.PG_util import pmutt, decompose_vec, RepBasisNorm, isOrthogonal, isindependent,find_rep,check_ham_wave
 from pg.read_IR_DSG import loadIR 
 import copy
 from pg.gramSchmidt import GramSchmidt
@@ -237,7 +237,7 @@ class ReductRep(Irrep):
         '''
         label_list = []
         name_ip = 'P00'
-        isindependt_all = []
+        isindependt_all = [False]
         for i in range(ndim):
             print("\n",10*'*','\n',2*'* ','i :',i)
             func_all    = np.zeros(ndim,dtype=np.complex128)
@@ -257,7 +257,7 @@ class ReductRep(Irrep):
                 phi2_flag  = True 
             if np.sum(np.abs(func_1)) > 1.0e-4 and phi2_flag:
                 func_1  = RepBasisNorm(func_1) 
-                isindependt_all = []
+#               isindependt_all = []
                 basis_set = []
                 print(5*'- ','\n','   check independence ...')
                 if int(multi_now) > 0 :
@@ -276,6 +276,7 @@ class ReductRep(Irrep):
                     isindependt_all += [True]
                 else :
                     label_t, independt   = isindependent(func_1,basis_set) 
+                    print('is independent? : ',independt)
                     isindependt_all += independt
                     if not independt :
                         label_list.append(float(0.0))
@@ -312,16 +313,21 @@ class ReductRep(Irrep):
                 isindependt_all += [False]
                 label_list.append(float(0.0))
         
-        pos_target = label_list.index(max(label_list))
-        print(10*'*-')
-        print('* the proper phi for phi1 of mulit=',multi_now,'of irreps ',self.label,'is',pos_target)
-        print(10*'*-')
-        func_all    = np.zeros(ndim,dtype=np.complex128)
-        func_all[pos_target] = complex(1.0)
-        Proj    = self.projector[name_ip]
-        func_1  = np.einsum('ij,i->j',Proj,func_all)
-        func_1  = RepBasisNorm(func_1) 
-        return [func_1]
+        if any(isindependt_all) :
+            pos_target = label_list.index(max(label_list))
+            print(10*'*-')
+            print('* the proper phi for phi1 of mulit=',multi_now,'of irreps ',self.label,'is',pos_target)
+            print(10*'*-')
+            func_all    = np.zeros(ndim,dtype=np.complex128)
+            func_all[pos_target] = complex(1.0)
+            Proj    = self.projector[name_ip]
+            func_1  = np.einsum('ij,i->j',Proj,func_all)
+            func_1  = RepBasisNorm(func_1) 
+            return [func_1]
+        else:
+            print('ERROR-info1:isindependt:\n',isindependt_all)
+            print('ERROR-info1:label_list:\n',label_list)
+            raise ValueError('ERROR in make_phi1')
 #####               print('   ??? is independent to pervious set: \n','   ',isindependt_all)
 #####               print('\n')
 #####               if all(isindependt_all) == True :
@@ -349,8 +355,8 @@ class ReductRep(Irrep):
         '''
         basis_other = []
         for i in range(self.dim-1):
-#           name_proj = 'P' + str(i+1) + str(i)
-            name_proj = 'P' + str(i) + str(i+1)
+            name_proj = 'P' + str(i+1) + str(i)
+#           name_proj = 'P' + str(i) + str(i+1)
             proj      = self.projector[name_proj]
 #           basis_t   = np.dot(proj,phi_1)
             basis_t   = np.einsum('ij,i->j',proj,phi_1)
@@ -407,6 +413,7 @@ class ReductRep(Irrep):
 #                   print(5*' ','op matrix  : \n',op[j])
 #                   print('')
                     P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i+1,i])*op[j]
+#                   P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i,i+1])*op[j]
                 self.projector[name] = P_normal
 #       print('Pro name   :',name)
         print('>>> Projectors  :',self.projector)
@@ -547,6 +554,7 @@ class MBPG():
         self.ham   = None 
         self.subs  = []
         self.dim   = 100  
+        self.op_irrep = []
 #       self.irrep = []
 #       for ir in irrep:
 #           irr = Irrep()
@@ -609,9 +617,19 @@ class MBPGsubs(MBPG):
         else :
             print('Check for the symmetry of hamiltonian :',error)
 
+    # transfrom operators into basis of irreps after collecting bases
+#   def trans_operators(self,trans):
+#       if trans :
+#           print('Check : the transformation matrix(basis matrix) in rows :\n',self.allbasis['matrix'])
+#           for iop in range(self.nop):
+#               op = tran_op(self.ham,np.transpose(np.array(self.allbasis['matrix'])))
+#       else :
+#           self.ham_irrep = copy.deepcopy(self.ham)
+
+
 
     # transfrom ham into basis of irreps after collecting bases
-    def trans_ham(self,trans):
+    def trans_ham(self,trans=True):
         if trans :
             print('Check : the transformation matrix(basis matrix) in rows :\n',self.allbasis['matrix'])
             self.ham_irrep = tran_op(self.ham,np.transpose(np.array(self.allbasis['matrix'])))
@@ -620,8 +638,49 @@ class MBPGsubs(MBPG):
 
 
     # diagonalize ham after transforming the hamiltonian into irreps bases
-    def diag_ham(self):
+    def diag_ham(self,trans=True):
         self.ham_eig, self.ham_evc = np.linalg.eigh(self.ham_irrep)
+#       self.ham_eig, self.ham_evc = np.linalg.eigh(0.5*(self.ham+self.ham_irrep))
+        print(20*'** ')
+        print('')
+        check_ham_wave(self.ham_irrep,self.ham_eig,self.ham_evc)
+        print('Check for the symmetry-kept eigenfunctions :')
+        print('[index from 0]')
+        Bmat_col = np.transpose(np.array(self.allbasis['matrix']))
+        print('op : \n',self.op)
+        if trans :
+            ham_evc_original = np.dot(Bmat_col,self.ham_evc)
+            print('Check ham :\n',np.dot(np.conjugate(np.transpose(ham_evc_original)),np.dot(self.ham,ham_evc_original)))
+        for idim in range(self.dim):
+            for iop in range(self.nop):
+                if trans :
+                    op = np.dot(np.dot(np.transpose(np.conjugate(Bmat_col)),self.op[iop]),Bmat_col)
+                    print('operators in irreps basis :\n',iop)
+                    print(op)
+                    op1 = copy.deepcopy(self.op[iop])
+#                   op = np.dot(np.dot(np.transpose(Bmat),self.op[iop]),np.conjugate(Bmat))
+                else :
+                    op = copy.deepcopy(self.op[iop])
+                if trans :
+                    error_ham_irr = np.sum(np.abs(np.dot(self.ham_irrep,op)-np.dot(op,self.ham_irrep)))
+                    wave_new = np.einsum('ij,j->i',ham_evc_original,op1[:,idim])
+#                   wave_new = np.einsum('ij,j->i',np.transpose(op1),ham_evc_original[:,idim])
+#                   wave_new = np.einsum('ij,j->i',op1,ham_evc_original[:,idim])
+                else :
+                    error_ham_irr = np.sum(np.abs(np.dot(self.ham_irrep,op)-np.dot(op,self.ham_irrep)))
+                    wave_new = np.einsum('ij,j->i',self.ham_evc,op[:,idim])
+#                   wave_new = np.einsum('ij,j->i',op,self.ham_evc[:,idim])
+                for jdim in range(self.dim):
+                    if trans :
+                        inner_product = np.dot(np.conjugate(ham_evc_original[:,jdim]),wave_new)
+                    else :
+                        inner_product = np.dot(np.conjugate(self.ham_evc[:,jdim]),wave_new)
+                    if np.abs(inner_product) > 1.0e-6  :
+                        print('WARNING:  m=',jdim,'O_i',iop,'n=',idim,'<m|O_i|n> =',inner_product)
+                        print(5*' ','error_ham_irr =',error_ham_irr)
+                        print(5*' ')
+        print('')
+        print(20*'** ')
 
     # to collect all the basis after self.Cal_ReductRep()
     def collect_basis(self):
@@ -744,7 +803,8 @@ class MBPGsubs(MBPG):
                     basis_set = ir.basis[name]
                     error = float(0.0)
                     for iop in range(self.nop):
-                        op = np.transpose(self.op[iop])
+#                       op = np.transpose(self.op[iop])
+                        op = self.op[iop]
                         rep_matrix  = find_rep(basis_set,op) 
                         rep_ir_imul.append(rep_matrix)
                         error = np.sum(np.abs(rep_matrix - ir.matrices[iop]))
@@ -752,6 +812,8 @@ class MBPGsubs(MBPG):
                             print('Error : ir=',ir.label,'imul=',imul,'iop',iop,'character:',ir.matrices[iop],'rep',rep_matrix,' error =',error)
                             print('   op:\n',op)
                             print('   basis_set:\n',basis_set)
+                        else:
+                            print('Success : ir=',ir.label,'imul=',imul,'iop',iop,'character:',ir.matrices[iop],'rep',rep_matrix,' error =',error)
         print(20*'**')
                     
 

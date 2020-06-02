@@ -55,7 +55,7 @@ Oprt_PG.check_symm_crystal(atom1.cfd_mat)
 Oprt_PG.show_attribute() if test else 0
 
 # <transform MRO into natural basis(MRN)>
-##print('umat_so_original:',Oprt_PG.umat_so)
+# should notice that this may be wrong
 umat_so_natural = tran_op(Oprt_PG.umat_so, atom1.amat) #umat_so_natrual  transforms in rows
 #umat_so_natural  = Oprt_PG.umat_so #umat_so_natrual  transforms in rows
 
@@ -97,24 +97,24 @@ for inn in range(atom1.nmin,atom1.nmax+1):
     pg_mb_sp.ham = hmat[sta:sta+len_sp,sta:sta+len_sp]
     pg_mb_sp.check_symm_ham()
     pg_mb_sp.Cal_ReductRep(dpg71.irreps)
-    for ir in pg_mb_sp.irrep :
-        if ir.label == 'GM5d' :
-            pro = np.zeros((10,10),dtype=np.complex128)
-            for irank in range(8):
-                pro += ir.dim/ir.nrank * np.conjugate(ir.matrices[irank][0,0])*manybody_umat[irank]
-            print("Check Pro(main) :\n",pro)
+#   for ir in pg_mb_sp.irrep :
+#       if ir.label == 'GM5d' :
+#           pro = np.zeros((10,10),dtype=np.complex128)
+#           for irank in range(8):
+#               pro += ir.dim/ir.nrank * np.conjugate(ir.matrices[irank][0,0])*manybody_umat[irank]
+#           print("Check Pro(main) :\n",pro)
     pg_mb_sp.check_projectors()
     pg_mb_sp.collect_basis()#the eigenwaves arranges in rows
     pg_mb_sp.check_irrepbasis_final()
 #test
-#   pg_mb_sp.trans_ham(trans=False)
-#   pg_mb_sp.diag_ham() 
-#   dump_1dr(len_sp,pg_mb_sp.ham_eig,path='eig_n_before_tran_'+str(inn)+'.dat',prec=1.0e-6)
-#   dump_2dc(len_sp,len_sp,pg_mb_sp.ham_evc,path='evc_n_before_tran_'+str(inn)+'.dat',prec=1.0e-6)
+    pg_mb_sp.trans_ham(trans=False)
+    pg_mb_sp.diag_ham(trans=False) 
+    dump_1dr(len_sp,pg_mb_sp.ham_eig,path='eig_n_before_tran_'+str(inn)+'.dat',prec=1.0e-6)
+    dump_2dc(len_sp,len_sp,pg_mb_sp.ham_evc,path='evc_n_before_tran_'+str(inn)+'.dat',prec=1.0e-6)
 #test
     pg_mb_sp.trans_ham(trans=True)
-    dump_2dc(len_sp,len_sp,pg_mb_sp.ham_irrep,path='ham_irrepbasis_'+str(inn)+'.dat',prec=1.0e-6)
-    pg_mb_sp.diag_ham() 
+#   dump_2dc(len_sp,len_sp,pg_mb_sp.ham_irrep,path='ham_irrepbasis_'+str(inn)+'.dat',prec=1.0e-6)
+    pg_mb_sp.diag_ham(trans=True) 
     dump_1dr(len_sp,pg_mb_sp.ham_eig,path='eig_n_'+str(inn)+'.dat',prec=1.0e-6)
     dump_2dc(len_sp,len_sp,pg_mb_sp.ham_evc,path='evc_n_'+str(inn)+'.dat',prec=1.0e-6)
     pg_mb_sp.check_basis_irreps1()# should be executed before pg_mb_sp.cal_degeneracy()
