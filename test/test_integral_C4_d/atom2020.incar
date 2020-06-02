@@ -7,8 +7,8 @@ soc_type      d
 soc_val       0.248265
 cfd           yes
 gqn           5 
-point_group   D4h
-space_group   139
+point_group   C4
+space_group   75
 basis_tran    no
 vpm_type      1 
 

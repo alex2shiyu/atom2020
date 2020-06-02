@@ -45,9 +45,9 @@ def check_ham_wave(ham,eig,wave):
 #    else:
 def find_rep(basis,op):
     '''
-    aim   : find the representation matrix for <op> in the set of <basis> 
-    op    : [numpy.ndarray] operators in a certain space 
-    basis : [list of 1D-numpy.ndarray] make it a close space for <op>: should transfrom in rows
+    aim    : find the representation matrix for <op> in the set of <basis> 
+    op     : [numpy.ndarray] operators in a certain space, should transform functions in columns 
+    basis  : [list of 1D-numpy.ndarray] make it a close space for <op>: should transfrom in rows
     output : rep transform in rows
     '''
     norb = len(basis)

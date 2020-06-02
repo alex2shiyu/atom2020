@@ -245,7 +245,7 @@ class ReductRep(Irrep):
 #           for ip in range(1):
             print("\n",'. . . . . . . . . ','\n','i(P_ii)=',0,'|','\n','. . . . . . . . . ')
             Proj    = self.projector[name_ip]
-            func_1  = np.einsum('ij,i->j',Proj,func_all)
+            func_1  = np.einsum('ji,i->j',Proj,func_all)
             # to make sure phi2 = P10 phi1 has nonzero element
             if self.dim > 1 :
                 phi2 = self.make_phi_other(func_1,multi_now)
@@ -254,7 +254,7 @@ class ReductRep(Irrep):
                 else:
                     phi2_flag = False
             else :
-                phi2_flag  = True 
+                phi2_flag = True 
             if np.sum(np.abs(func_1)) > 1.0e-4 and phi2_flag:
                 func_1  = RepBasisNorm(func_1) 
 #               isindependt_all = []
@@ -321,7 +321,7 @@ class ReductRep(Irrep):
             func_all    = np.zeros(ndim,dtype=np.complex128)
             func_all[pos_target] = complex(1.0)
             Proj    = self.projector[name_ip]
-            func_1  = np.einsum('ij,i->j',Proj,func_all)
+            func_1  = np.einsum('ji,i->j',Proj,func_all)
             func_1  = RepBasisNorm(func_1) 
             return [func_1]
         else:
@@ -359,7 +359,7 @@ class ReductRep(Irrep):
 #           name_proj = 'P' + str(i) + str(i+1)
             proj      = self.projector[name_proj]
 #           basis_t   = np.dot(proj,phi_1)
-            basis_t   = np.einsum('ij,i->j',proj,phi_1)
+            basis_t   = np.einsum('ji,i->j',proj,phi_1)
             print('* WAVE(phi'+str(i+2)+') Done :  of multi<',multi_now,'> of <',self.label,'> is :',np.linalg.norm(basis_t))
             basis_other.append(basis_t)
         return basis_other
@@ -391,7 +391,8 @@ class ReductRep(Irrep):
             P_normal = np.zeros((dim_op,dim_op),dtype=np.complex128)
             name = 'P' + str(0) + str(i)
             for j in range(self.nrank):
-                P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][0,i])*op[j]
+#               P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][0,i])*op[j]
+                P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i,0])*op[j]
             self.projector[name] = P_normal
             if i > 0:
                 P_normal = np.zeros((dim_op,dim_op),dtype=np.complex128)
@@ -412,8 +413,8 @@ class ReductRep(Irrep):
 #                   print(5*' ','characters : \n',self.matrices[j])
 #                   print(5*' ','op matrix  : \n',op[j])
 #                   print('')
-                    P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i+1,i])*op[j]
-#                   P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i,i+1])*op[j]
+#                   P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i+1,i])*op[j]
+                    P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i,i+1])*op[j]
                 self.projector[name] = P_normal
 #       print('Pro name   :',name)
         print('>>> Projectors  :',self.projector)
@@ -663,13 +664,11 @@ class MBPGsubs(MBPG):
                     op = copy.deepcopy(self.op[iop])
                 if trans :
                     error_ham_irr = np.sum(np.abs(np.dot(self.ham_irrep,op)-np.dot(op,self.ham_irrep)))
-                    wave_new = np.einsum('ij,j->i',ham_evc_original,op1[:,idim])
-#                   wave_new = np.einsum('ij,j->i',np.transpose(op1),ham_evc_original[:,idim])
+                    wave_new = np.einsum('ij,j->i',op1,ham_evc_original[:,idim])
 #                   wave_new = np.einsum('ij,j->i',op1,ham_evc_original[:,idim])
                 else :
                     error_ham_irr = np.sum(np.abs(np.dot(self.ham_irrep,op)-np.dot(op,self.ham_irrep)))
-                    wave_new = np.einsum('ij,j->i',self.ham_evc,op[:,idim])
-#                   wave_new = np.einsum('ij,j->i',op,self.ham_evc[:,idim])
+                    wave_new = np.einsum('ij,j->i',op,self.ham_evc[:,idim])
                 for jdim in range(self.dim):
                     if trans :
                         inner_product = np.dot(np.conjugate(ham_evc_original[:,jdim]),wave_new)
@@ -809,6 +808,7 @@ class MBPGsubs(MBPG):
                         rep_ir_imul.append(rep_matrix)
                         error = np.sum(np.abs(rep_matrix - ir.matrices[iop]))
                         if np.abs(error) > 1.0e-6:
+                            raise ValueError('ERROR: basis is not complete : ', error)
                             print('Error : ir=',ir.label,'imul=',imul,'iop',iop,'character:',ir.matrices[iop],'rep',rep_matrix,' error =',error)
                             print('   op:\n',op)
                             print('   basis_set:\n',basis_set)
@@ -1080,21 +1080,23 @@ class TranOrb():
             self.umat_so.append(mat)
 
     def check_symm_crystal(self,crystal_matrix):
-        nop = int(self.nfunc)
-        crystal_new = np.zeros((nop,nop),dtype=np.complex128)
-        print('nop:\n',nop)
+        ndim = int(self.nfunc)
+        crystal_new = np.zeros((ndim,ndim),dtype=np.complex128)
+        print('ndim:\n',ndim)
+        print('nop:\n',self.nop)
         print('self.umat_new:\n',self.umat_new[0].shape)
         print('crystal_matrix:\n',crystal_matrix.shape)
-        for i in range(nop):
+        # below is proper for double group but not for single group
+        for i in range(int(self.nop/2)):
             # note rep_vec is R^{-1}
-            crystal_new += np.dot(np.conjugate(self.umat_new[i]),np.dot(crystal_matrix[0:2*nop:2,0:2*nop:2],np.transpose(self.umat_new[i])))
-        crystal_new = crystal_new / float(nop)
+            crystal_new += np.dot(np.conjugate(self.umat_new[i]),np.dot(crystal_matrix[0:2*ndim:2,0:2*ndim:2],np.transpose(self.umat_new[i])))
+        crystal_new = crystal_new*2 / float(self.nop)
 
-        error = np.sum(np.abs(crystal_matrix[0:2*nop:2,0:2*nop:2] - crystal_new))
+        error = np.sum(np.abs(crystal_matrix[0:2*ndim:2,0:2*ndim:2] - crystal_new))
         if error > 1.0e-6 :
-            dump_2dc(nop,nop,crystal_new,path='cfd_new.dat',prec=1.0e-6)
-            dump_2dc(nop,nop,crystal_matrix[0:2*nop:2,0:2*nop:2],path='cfd.dat',prec=1.0e-6)
-            dump_2dc(nop,nop,crystal_matrix[0:2*nop:2,0:2*nop:2] - crystal_new,path='cfd_diff.dat',prec=1.0e-6)
+            dump_2dc(ndim,ndim,crystal_new,path='cfd_new.dat',prec=1.0e-6)
+            dump_2dc(ndim,ndim,crystal_matrix[0:2*ndim:2,0:2*ndim:2],path='cfd.dat',prec=1.0e-6)
+            dump_2dc(ndim,ndim,crystal_matrix[0:2*ndim:2,0:2*ndim:2] - crystal_new,path='cfd_diff.dat',prec=1.0e-6)
             raise ValueError('error in check_symm_crystal and error value : ',error)
         else :
             print('Check for the symmetry of crystal :',error)
