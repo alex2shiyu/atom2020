@@ -51,8 +51,9 @@ dpg71.show_attribute()
 # <make matrix representation(MRO: MROrb) in d f orbitals space> 
 npoly1, dim1, npower1, nfunc1 = get_TranOrb_param(atom1.soc_type)
 Oprt_PG = TranOrb(dpg71.rep_vec,dpg71.rep_spin,npoly1,dim=dim1,npower=npower1,nfunc=nfunc1,shell=atom1.soc_type)
-Oprt_PG.check_symm_crystal(atom1.cfd_mat)
 Oprt_PG.show_attribute() if test else 0
+Oprt_PG.check_symm_crystal(atom1.cfd_mat)
+Oprt_PG.check_symm_soc(atom1.soc_mat)
 
 # <transform MRO into natural basis(MRN)>
 # should notice that this may be wrong

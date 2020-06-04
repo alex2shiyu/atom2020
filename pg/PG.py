@@ -392,7 +392,7 @@ class ReductRep(Irrep):
             name = 'P' + str(0) + str(i)
             for j in range(self.nrank):
 #               P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][0,i])*op[j]
-                P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i,0])*op[j]
+                P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][0,i])*op[j]
             self.projector[name] = P_normal
             if i > 0:
                 P_normal = np.zeros((dim_op,dim_op),dtype=np.complex128)
@@ -414,7 +414,7 @@ class ReductRep(Irrep):
 #                   print(5*' ','op matrix  : \n',op[j])
 #                   print('')
 #                   P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i+1,i])*op[j]
-                    P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i,i+1])*op[j]
+                    P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i+1,i])*op[j]
                 self.projector[name] = P_normal
 #       print('Pro name   :',name)
         print('>>> Projectors  :',self.projector)
@@ -526,7 +526,9 @@ class DPG():
                                                          # it to construct the projectors, we will use the form which
                                                          # transform in columns as same as the convention of group
                                                          # theory
-                self.rep_spin = grp.su2s
+#               self.rep_spin = [a[::-1,::-1] for a in grp.su2s]
+#               self.rep_spin = [np.transpose(np.conjugate(a)) for a in grp.su2s]
+                self.rep_spin = grp.su2s # it transform in rows for vectors
                 self.irreps   = grp.irreps
 #               print('dpg71.nrank:\n',self.nrank)
 #               print('rotC:\n',grp.rotC)
@@ -638,10 +640,10 @@ class MBPGsubs(MBPG):
             self.ham_irrep = copy.deepcopy(self.ham)
 
 
+
     # diagonalize ham after transforming the hamiltonian into irreps bases
     def diag_ham(self,trans=True):
         self.ham_eig, self.ham_evc = np.linalg.eigh(self.ham_irrep)
-#       self.ham_eig, self.ham_evc = np.linalg.eigh(0.5*(self.ham+self.ham_irrep))
         print(20*'** ')
         print('')
         check_ham_wave(self.ham_irrep,self.ham_eig,self.ham_evc)
@@ -655,6 +657,7 @@ class MBPGsubs(MBPG):
         for idim in range(self.dim):
             for iop in range(self.nop):
                 if trans :
+# transform functions basis in columns
                     op = np.dot(np.dot(np.transpose(np.conjugate(Bmat_col)),self.op[iop]),Bmat_col)
                     print('operators in irreps basis :\n',iop)
                     print(op)
@@ -662,24 +665,69 @@ class MBPGsubs(MBPG):
 #                   op = np.dot(np.dot(np.transpose(Bmat),self.op[iop]),np.conjugate(Bmat))
                 else :
                     op = copy.deepcopy(self.op[iop])
-                if trans :
-                    error_ham_irr = np.sum(np.abs(np.dot(self.ham_irrep,op)-np.dot(op,self.ham_irrep)))
-                    wave_new = np.einsum('ij,j->i',op1,ham_evc_original[:,idim])
-#                   wave_new = np.einsum('ij,j->i',op1,ham_evc_original[:,idim])
-                else :
-                    error_ham_irr = np.sum(np.abs(np.dot(self.ham_irrep,op)-np.dot(op,self.ham_irrep)))
-                    wave_new = np.einsum('ij,j->i',op,self.ham_evc[:,idim])
+#               if trans :
+#                   error_ham_irr = np.sum(np.abs(np.dot(self.ham_irrep,op)-np.dot(op,self.ham_irrep)))
+#                   wave_new = np.einsum('ij,j->i',op,ham_evc[:,idim])
+                error_ham_irr = np.sum(np.abs(np.dot(self.ham_irrep,op)-np.dot(op,self.ham_irrep)))
+                wave_new = np.einsum('ij,j->i',op,self.ham_evc[:,idim])
+#               else :
+#                   error_ham_irr = np.sum(np.abs(np.dot(self.ham_irrep,op)-np.dot(op,self.ham_irrep)))
+#                   wave_new = np.einsum('ij,j->i',op,self.ham_evc[:,idim])
                 for jdim in range(self.dim):
-                    if trans :
-                        inner_product = np.dot(np.conjugate(ham_evc_original[:,jdim]),wave_new)
-                    else :
-                        inner_product = np.dot(np.conjugate(self.ham_evc[:,jdim]),wave_new)
+#                   if trans :
+#                       inner_product = np.dot(np.conjugate(self.ham_evc[:,jdim]),wave_new)
+                    inner_product = np.dot(np.conjugate(self.ham_evc[:,jdim]),wave_new)
+#                   else :
+#                       inner_product = np.dot(np.conjugate(self.ham_evc[:,jdim]),wave_new)
                     if np.abs(inner_product) > 1.0e-6  :
                         print('WARNING:  m=',jdim,'O_i',iop,'n=',idim,'<m|O_i|n> =',inner_product)
                         print(5*' ','error_ham_irr =',error_ham_irr)
                         print(5*' ')
         print('')
         print(20*'** ')
+
+#    # diagonalize ham after transforming the hamiltonian into irreps bases
+#    def diag_ham(self,trans=True):
+#        self.ham_eig, self.ham_evc = np.linalg.eigh(self.ham_irrep)
+##       self.ham_eig, self.ham_evc = np.linalg.eigh(0.5*(self.ham+self.ham_irrep))
+#        print(20*'** ')
+#        print('')
+#        check_ham_wave(self.ham_irrep,self.ham_eig,self.ham_evc)
+#        print('Check for the symmetry-kept eigenfunctions :')
+#        print('[index from 0]')
+#        Bmat_col = np.transpose(np.array(self.allbasis['matrix']))
+#        print('op : \n',self.op)
+#        if trans :
+#            ham_evc_original = np.dot(Bmat_col,self.ham_evc)
+#            print('Check ham :\n',np.dot(np.conjugate(np.transpose(ham_evc_original)),np.dot(self.ham,ham_evc_original)))
+#        for idim in range(self.dim):
+#            for iop in range(self.nop):
+#                if trans :
+#                    op = np.dot(np.dot(np.transpose(np.conjugate(Bmat_col)),self.op[iop]),Bmat_col)
+#                    print('operators in irreps basis :\n',iop)
+#                    print(op)
+#                    op1 = copy.deepcopy(self.op[iop])
+##                   op = np.dot(np.dot(np.transpose(Bmat),self.op[iop]),np.conjugate(Bmat))
+#                else :
+#                    op = copy.deepcopy(self.op[iop])
+#                if trans :
+#                    error_ham_irr = np.sum(np.abs(np.dot(self.ham_irrep,op)-np.dot(op,self.ham_irrep)))
+#                    wave_new = np.einsum('ij,j->i',op1,ham_evc_original[:,idim])
+##                   wave_new = np.einsum('ij,j->i',op1,ham_evc_original[:,idim])
+#                else :
+#                    error_ham_irr = np.sum(np.abs(np.dot(self.ham_irrep,op)-np.dot(op,self.ham_irrep)))
+#                    wave_new = np.einsum('ij,j->i',op,self.ham_evc[:,idim])
+#                for jdim in range(self.dim):
+#                    if trans :
+#                        inner_product = np.dot(np.conjugate(ham_evc_original[:,jdim]),wave_new)
+#                    else :
+#                        inner_product = np.dot(np.conjugate(self.ham_evc[:,jdim]),wave_new)
+#                    if np.abs(inner_product) > 1.0e-6  :
+#                        print('WARNING:  m=',jdim,'O_i',iop,'n=',idim,'<m|O_i|n> =',inner_product)
+#                        print(5*' ','error_ham_irr =',error_ham_irr)
+#                        print(5*' ')
+#        print('')
+#        print(20*'** ')
 
     # to collect all the basis after self.Cal_ReductRep()
     def collect_basis(self):
@@ -766,7 +814,10 @@ class MBPGsubs(MBPG):
                 if i == self.dim -1 :
                     deginfo_t['degeneracy'] = degeneracy_cnt
                     self.deginfo.append(deginfo_t)
+            print('deginfo -> i(band index,from 0)=',i)
+            print(5*' ',deginfo_t)
         self.deg = deg_cnt 
+        print('deg = ',self.deg)
         # check the self-consistence:
         if self.deg != len(self.deginfo):
             print('self.deg = ',self.deg,'len(self.deginfo) = ',len(self.deginfo))
@@ -775,14 +826,14 @@ class MBPGsubs(MBPG):
             deg_irreplabel = None
             for j in range(self.deginfo[i]['start'],self.deginfo[i]['start']+self.deginfo[i]['degeneracy']):
                 for jj in range(self.dim):
-                    if np.abs(self.ham_evc[jj,2]) > 1.0e-3 : 
+                    if np.abs(self.ham_evc[jj,j]) > 1.0e-3 : 
                         deg_irreplabel = self.allbasis['irreplabel'][jj][0]
                         self.deginfo[i]['irrep'] = copy.deepcopy(deg_irreplabel)
                         break
                 if deg_irreplabel != None :
                     break
         print('Degeneracy:  \n',self.deg)
-        print('Degeneracy:  \n',self.deginfo)
+        print('Degeneracy(info):  \n',self.deginfo)
        
     def check_irrepbasis_final(self):
         '''
@@ -808,10 +859,10 @@ class MBPGsubs(MBPG):
                         rep_ir_imul.append(rep_matrix)
                         error = np.sum(np.abs(rep_matrix - ir.matrices[iop]))
                         if np.abs(error) > 1.0e-6:
-                            raise ValueError('ERROR: basis is not complete : ', error)
                             print('Error : ir=',ir.label,'imul=',imul,'iop',iop,'character:',ir.matrices[iop],'rep',rep_matrix,' error =',error)
                             print('   op:\n',op)
                             print('   basis_set:\n',basis_set)
+                            raise ValueError('ERROR: basis is not complete : ', error)
                         else:
                             print('Success : ir=',ir.label,'imul=',imul,'iop',iop,'character:',ir.matrices[iop],'rep',rep_matrix,' error =',error)
         print(20*'**')
@@ -833,6 +884,7 @@ class MBPGsubs(MBPG):
                 label_dict[str(cnt_dict)] = j
 
             work_array  = np.transpose(np.array(basis_list))
+            print('work array :',work_array)
             print('Deg(from 0)             : ', i)
 #           print('the shape of work_array : ',work_array.shape)
 
@@ -861,9 +913,14 @@ class MBPGsubs(MBPG):
             # if yes : pass
             # if no  : error
             irrep_t     = self.irrep[self.irrepindex[self.deginfo[i]['irrep']]] 
+            print(' irrep now :',irrep_t)
             if irrep_t.dim > 1:
                 if not all(logic_list) :
                     ibase = int(0)
+                    for kk in range(self.irrepindex[self.deginfo[i]['irrep']]):
+                        if self.irrep[kk].multi > 0:
+                            ibase += self.irrep[kk].multi * self.irrep[kk].dim
+                    print('ibase for ',irrep_t.label, 'is : ',ibase)
                     find_label = False
                     for k in range(irrep_t.multi):
                         basis_array = np.zeros((irrep_t.dim,irrep_t.dim),dtype=np.complex128)
@@ -871,14 +928,18 @@ class MBPGsubs(MBPG):
                             for ideg in range(irrep_t.dim):
                                 basis_array[icol,ideg] = work_array[ibase+icol,ideg]
                         # judge whether the basis_array is reversible?
-                        if np.linalg.det(basis_array) > 1e-3 :
+                        print('>>> matrix start to make decomposition :\n',basis_array)
+                        if np.abs(np.linalg.det(basis_array)) > 1e-3 :
                             find_label = True
                             print(">>> index for multi of basis decomposition(from 0) :",k)
                             break
                         elif k == irrep_t.multi -1 :
+                            print(">>> decomposition(from 0) : Failed in multi=",k,'/',irrep_t.multi,'determinant =',np.linalg.det(basis_array))
                             print(">>> index for multi of basis decomposition(from 0) : Failed")
                             raise ValueError(">>> Can not find proper matrix to decompose")
-                        ibase = int(irrep_t.dim * (k+1))
+                        else:
+                            print(">>> decomposition(from 0) : Failed in multi=",k,'/',irrep_t.multi,'determinant =',np.linalg.det(basis_array))
+                        ibase += int(irrep_t.dim * (k+1))
                     if find_label :
                         print('>>> decomposition matrix original :\n',basis_array)
                         print('>>> decomposition matrix :\n',np.linalg.inv(basis_array))
@@ -1076,8 +1137,26 @@ class TranOrb():
     # the most last method to be use in this class:
     def make_umat_so(self):
         for i in range(self.nop):
-            mat = np.kron(self.umat_new[i],self.su2[i])
+            mat = np.kron(self.umat_new[i],np.transpose(self.su2[i]))
             self.umat_so.append(mat)
+
+    def check_symm_soc(self,soc_matrix):
+        ndim = int(self.nfunc) * 2
+        soc_new = np.zeros((ndim,ndim),dtype=np.complex128)
+        # below is proper for double group but not for single group
+        for i in range(self.nop):
+            # note rep_vec is R^{-1}
+            soc_new += np.dot(np.conjugate(self.umat_so[i]),np.dot(soc_matrix,np.transpose(self.umat_so[i])))
+        soc_new = soc_new / float(self.nop)
+
+        error = np.sum(np.abs(soc_matrix - soc_new))
+        if error > 1.0e-6 :
+            dump_2dc(ndim,ndim,soc_new,path='soc_new.dat',prec=1.0e-6)
+            dump_2dc(ndim,ndim,soc_matrix,path='soc.dat',prec=1.0e-6)
+            dump_2dc(ndim,ndim,soc_matrix - soc_new,path='soc_diff.dat',prec=1.0e-6)
+            raise ValueError('error in check_symm_soc and error value : ',error)
+        else :
+            print('success : Check for the symmetry of soc :',error)
 
     def check_symm_crystal(self,crystal_matrix):
         ndim = int(self.nfunc)

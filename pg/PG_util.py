@@ -56,14 +56,15 @@ def find_rep(basis,op):
     for irow in range(norb):
         for icol in range(norb):
             # <1|O|1>=a_11,  <2|O|1> = a_12 
-            rep[irow,icol] = np.einsum('i,ij,j->',np.conjugate(basis[icol]),op,basis[irow])
+            rep[icol,irow] = np.einsum('i,ij,j->',np.conjugate(basis[icol]),op,basis[irow])
+#           rep[irow,icol] = np.einsum('i,ij,j->',np.conjugate(basis[icol]),op,basis[irow])
     # make sure the basis is colse
     is_close = []
     for irow in range(norb):
         basis_after_trans  = np.einsum('ij,j->i',op,basis[irow])
         basis_recover = np.zeros(ndim,dtype=np.complex128)
         for iorb in range(norb):
-            basis_recover += rep[irow,iorb]*basis[iorb]
+            basis_recover += rep[iorb,irow]*basis[iorb]
         error = np.sum(np.abs(basis_recover - basis_after_trans))
         if error < 1.0e-6 :
             is_close.append(True)

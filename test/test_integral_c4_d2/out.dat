@@ -566,7 +566,7 @@ rep_spin:
 mb_shell:
  None
 irreps:
- [<pg.read_IR_DSG.Irrep object at 0x2b9ce7cfcc18>, <pg.read_IR_DSG.Irrep object at 0x2b9ce7cfcba8>, <pg.read_IR_DSG.Irrep object at 0x2b9ce7cfcf98>, <pg.read_IR_DSG.Irrep object at 0x2b9ce7cfc828>, <pg.read_IR_DSG.Irrep object at 0x2b9ce7cfcbe0>, <pg.read_IR_DSG.Irrep object at 0x2b9ce7cfcb70>, <pg.read_IR_DSG.Irrep object at 0x2b9ce7cfc128>, <pg.read_IR_DSG.Irrep object at 0x2b9ce7cfc7b8>]
+ [<pg.read_IR_DSG.Irrep object at 0x2b6be7b0ab70>, <pg.read_IR_DSG.Irrep object at 0x2b6be7b0ab00>, <pg.read_IR_DSG.Irrep object at 0x2b6be7b0aef0>, <pg.read_IR_DSG.Irrep object at 0x2b6be7b0a6a0>, <pg.read_IR_DSG.Irrep object at 0x2b6be7b0aa58>, <pg.read_IR_DSG.Irrep object at 0x2b6be7b0a940>, <pg.read_IR_DSG.Irrep object at 0x2b6be7b0a080>, <pg.read_IR_DSG.Irrep object at 0x2b6be7b0a198>]
 gen_pos:
  None
 gen_mul:
@@ -657,16 +657,6 @@ vec_oldbasis= [[-1.          0.          0.          1.73205081  0.        ]
 >>> decomposition succeed ...
 >>> decomposition succeed ...
 >>> decomposition succeed ...
-ndim:
- 5
-nop:
- 8
-self.umat_new:
- (5, 5)
-crystal_matrix:
- (10, 10)
-Check for the symmetry of crystal : 7.105427357601002e-15
-success : Check for the symmetry of soc : 2.220446049250313e-16
 dim= 3
 npower= 2
 npoly= [3 1 1 2 1]
@@ -1035,6 +1025,16 @@ umat_so= [array([[1.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j, 0.+0.j
          0.        +0.j        , -0.        +0.j        ,
          0.        +0.j        , -0.        +0.j        ,
         -0.        +0.j        ,  0.70710678-0.70710678j]])]
+ndim:
+ 5
+nop:
+ 8
+self.umat_new:
+ (5, 5)
+crystal_matrix:
+ (10, 10)
+Check for the symmetry of crystal : 7.105427357601002e-15
+success : Check for the symmetry of soc : 2.220446049250313e-16
 ****************************************
 * nocc =  1
 basis1:
@@ -11001,7 +11001,7 @@ operators in irreps basis :
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 1.+0.j 0.+0.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 1.+0.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 1.+0.j]]
-WARNING:  m= 1 O_i 0 n= 1 <m|O_i|n> = (1.0000000000000004+0j)
+WARNING:  m= 1 O_i 0 n= 1 <m|O_i|n> = (1.0000000000000002+0j)
       error_ham_irr = 2.220446049250313e-16
      
 operators in irreps basis :
@@ -11016,7 +11016,7 @@ operators in irreps basis :
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+1.j 0.+0.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+1.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+1.j]]
-WARNING:  m= 1 O_i 1 n= 1 <m|O_i|n> = -1.0000000000000004j
+WARNING:  m= 1 O_i 1 n= 1 <m|O_i|n> = -1.0000000000000002j
       error_ham_irr = 2.220446049250313e-16
      
 operators in irreps basis :
@@ -11131,7 +11131,7 @@ operators in irreps basis :
    0.+0.j]
  [ 0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j
   -1.+0.j]]
-WARNING:  m= 1 O_i 4 n= 1 <m|O_i|n> = (-1.0000000000000004+0j)
+WARNING:  m= 1 O_i 4 n= 1 <m|O_i|n> = (-1.0000000000000002+0j)
       error_ham_irr = 2.220446049250313e-16
      
 operators in irreps basis :
@@ -11146,7 +11146,7 @@ operators in irreps basis :
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.-1.j 0.+0.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.-1.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.-1.j]]
-WARNING:  m= 1 O_i 5 n= 1 <m|O_i|n> = 1.0000000000000004j
+WARNING:  m= 1 O_i 5 n= 1 <m|O_i|n> = 1.0000000000000002j
       error_ham_irr = 2.220446049250313e-16
      
 operators in irreps basis :
@@ -11811,7 +11811,7 @@ operators in irreps basis :
    0.        +0.j          0.        +0.j          0.        +0.j
    0.        +0.j          0.        +0.j          0.        +0.j
    0.70710678+0.70710678j]]
-WARNING:  m= 4 O_i 2 n= 4 <m|O_i|n> = (-0.7071067811865472+0.7071067811865472j)
+WARNING:  m= 4 O_i 2 n= 4 <m|O_i|n> = (-0.7071067811865472+0.7071067811865474j)
       error_ham_irr = 3.140184917367551e-16
      
 operators in irreps basis :
@@ -11856,7 +11856,7 @@ operators in irreps basis :
    0.        +0.j          0.        +0.j          0.        +0.j
    0.        +0.j          0.        +0.j          0.        +0.j
    0.70710678-0.70710678j]]
-WARNING:  m= 4 O_i 3 n= 4 <m|O_i|n> = (-0.7071067811865472-0.7071067811865472j)
+WARNING:  m= 4 O_i 3 n= 4 <m|O_i|n> = (-0.7071067811865474-0.7071067811865472j)
       error_ham_irr = 3.140184917367551e-16
      
 operators in irreps basis :
@@ -11941,7 +11941,7 @@ operators in irreps basis :
    0.        +0.j          0.        +0.j          0.        +0.j
    0.        +0.j          0.        +0.j          0.        +0.j
   -0.70710678-0.70710678j]]
-WARNING:  m= 4 O_i 6 n= 4 <m|O_i|n> = (0.7071067811865472-0.7071067811865472j)
+WARNING:  m= 4 O_i 6 n= 4 <m|O_i|n> = (0.7071067811865472-0.7071067811865474j)
       error_ham_irr = 3.140184917367551e-16
      
 operators in irreps basis :
@@ -11986,7 +11986,7 @@ operators in irreps basis :
    0.        +0.j          0.        +0.j          0.        +0.j
    0.        +0.j          0.        +0.j          0.        +0.j
   -0.70710678+0.70710678j]]
-WARNING:  m= 4 O_i 7 n= 4 <m|O_i|n> = (0.7071067811865472+0.7071067811865472j)
+WARNING:  m= 4 O_i 7 n= 4 <m|O_i|n> = (0.7071067811865474+0.7071067811865472j)
       error_ham_irr = 3.140184917367551e-16
      
 operators in irreps basis :
@@ -12251,7 +12251,7 @@ operators in irreps basis :
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 1.+0.j 0.+0.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 1.+0.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 1.+0.j]]
-WARNING:  m= 6 O_i 0 n= 6 <m|O_i|n> = (0.9999999999999997+0j)
+WARNING:  m= 6 O_i 0 n= 6 <m|O_i|n> = (0.9999999999999996+0j)
       error_ham_irr = 2.220446049250313e-16
      
 operators in irreps basis :
@@ -12266,7 +12266,7 @@ operators in irreps basis :
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+1.j 0.+0.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+1.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+1.j]]
-WARNING:  m= 6 O_i 1 n= 6 <m|O_i|n> = -0.9999999999999997j
+WARNING:  m= 6 O_i 1 n= 6 <m|O_i|n> = -0.9999999999999996j
       error_ham_irr = 2.220446049250313e-16
      
 operators in irreps basis :
@@ -12311,7 +12311,7 @@ operators in irreps basis :
    0.        +0.j          0.        +0.j          0.        +0.j
    0.        +0.j          0.        +0.j          0.        +0.j
    0.70710678+0.70710678j]]
-WARNING:  m= 6 O_i 2 n= 6 <m|O_i|n> = (0.7071067811865474-0.7071067811865474j)
+WARNING:  m= 6 O_i 2 n= 6 <m|O_i|n> = (0.7071067811865472-0.7071067811865472j)
       error_ham_irr = 3.140184917367551e-16
      
 operators in irreps basis :
@@ -12356,7 +12356,7 @@ operators in irreps basis :
    0.        +0.j          0.        +0.j          0.        +0.j
    0.        +0.j          0.        +0.j          0.        +0.j
    0.70710678-0.70710678j]]
-WARNING:  m= 6 O_i 3 n= 6 <m|O_i|n> = (0.7071067811865474+0.7071067811865474j)
+WARNING:  m= 6 O_i 3 n= 6 <m|O_i|n> = (0.7071067811865472+0.7071067811865472j)
       error_ham_irr = 3.140184917367551e-16
      
 operators in irreps basis :
@@ -12381,7 +12381,7 @@ operators in irreps basis :
    0.+0.j]
  [ 0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j
   -1.+0.j]]
-WARNING:  m= 6 O_i 4 n= 6 <m|O_i|n> = (-0.9999999999999997+0j)
+WARNING:  m= 6 O_i 4 n= 6 <m|O_i|n> = (-0.9999999999999996+0j)
       error_ham_irr = 2.220446049250313e-16
      
 operators in irreps basis :
@@ -12396,7 +12396,7 @@ operators in irreps basis :
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.-1.j 0.+0.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.-1.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.-1.j]]
-WARNING:  m= 6 O_i 5 n= 6 <m|O_i|n> = 0.9999999999999997j
+WARNING:  m= 6 O_i 5 n= 6 <m|O_i|n> = 0.9999999999999996j
       error_ham_irr = 2.220446049250313e-16
      
 operators in irreps basis :
@@ -12441,7 +12441,7 @@ operators in irreps basis :
    0.        +0.j          0.        +0.j          0.        +0.j
    0.        +0.j          0.        +0.j          0.        +0.j
   -0.70710678-0.70710678j]]
-WARNING:  m= 6 O_i 6 n= 6 <m|O_i|n> = (-0.7071067811865474+0.7071067811865474j)
+WARNING:  m= 6 O_i 6 n= 6 <m|O_i|n> = (-0.7071067811865472+0.7071067811865472j)
       error_ham_irr = 3.140184917367551e-16
      
 operators in irreps basis :
@@ -12486,7 +12486,7 @@ operators in irreps basis :
    0.        +0.j          0.        +0.j          0.        +0.j
    0.        +0.j          0.        +0.j          0.        +0.j
   -0.70710678+0.70710678j]]
-WARNING:  m= 6 O_i 7 n= 6 <m|O_i|n> = (-0.7071067811865474-0.7071067811865474j)
+WARNING:  m= 6 O_i 7 n= 6 <m|O_i|n> = (-0.7071067811865472-0.7071067811865472j)
       error_ham_irr = 3.140184917367551e-16
      
 operators in irreps basis :
@@ -12501,7 +12501,7 @@ operators in irreps basis :
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 1.+0.j 0.+0.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 1.+0.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 1.+0.j]]
-WARNING:  m= 7 O_i 0 n= 7 <m|O_i|n> = (0.9999999999999994+0j)
+WARNING:  m= 7 O_i 0 n= 7 <m|O_i|n> = (0.9999999999999996+0j)
       error_ham_irr = 2.220446049250313e-16
      
 operators in irreps basis :
@@ -12516,7 +12516,7 @@ operators in irreps basis :
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+1.j 0.+0.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+1.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+1.j]]
-WARNING:  m= 7 O_i 1 n= 7 <m|O_i|n> = 0.9999999999999994j
+WARNING:  m= 7 O_i 1 n= 7 <m|O_i|n> = 0.9999999999999996j
       error_ham_irr = 2.220446049250313e-16
      
 operators in irreps basis :
@@ -12631,7 +12631,7 @@ operators in irreps basis :
    0.+0.j]
  [ 0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j  0.+0.j
   -1.+0.j]]
-WARNING:  m= 7 O_i 4 n= 7 <m|O_i|n> = (-0.9999999999999994+0j)
+WARNING:  m= 7 O_i 4 n= 7 <m|O_i|n> = (-0.9999999999999996+0j)
       error_ham_irr = 2.220446049250313e-16
      
 operators in irreps basis :
@@ -12646,7 +12646,7 @@ operators in irreps basis :
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.-1.j 0.+0.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.-1.j 0.+0.j]
  [0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.+0.j 0.-1.j]]
-WARNING:  m= 7 O_i 5 n= 7 <m|O_i|n> = -0.9999999999999994j
+WARNING:  m= 7 O_i 5 n= 7 <m|O_i|n> = -0.9999999999999996j
       error_ham_irr = 2.220446049250313e-16
      
 operators in irreps basis :
