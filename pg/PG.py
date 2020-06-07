@@ -10,6 +10,7 @@ from pg.read_IR_DSG import loadIR
 import copy
 from pg.gramSchmidt import GramSchmidt
 from module.mod_dump import dump_4dc, dump_2dc, dump_1dr, dump_1dc
+from src.atomic_subs import show_sub4header
 
 class Irrep:
     '''
@@ -35,13 +36,13 @@ class Irrep:
             character_t += np.conjugate(self.characters[iop])*np.trace(rep[iop]) 
         multi_tmp = np.round(character_t.real/float(self.nrank))
         if np.abs(multi_tmp - character_t.real/float(self.nrank)) < 1.0E-6 :
-            print("multi success!")
+            print("multi success!") if self.iprint == 3 else 0
             return int(multi_tmp)
         else:
-            print('multi is not integer : ',multi_tmp,character_t.real/float(self.nrank),np.abs(multi_tmp - character_t.real/float(self.nrank)))
+            raise ValueError('multi is not integer : ',multi_tmp,character_t.real/float(self.nrank),np.abs(multi_tmp - character_t.real/float(self.nrank)))
 
 class ReductRep(Irrep):
-    def __init__(self,label='',dim=1):
+    def __init__(self,label='', dim=1, iprint=1):
         super().__init__(label='',dim=1)
         self.multi      = 100 # dictionary to contain various projectors for a certain Irrep
         self.projector  = {}  # dictionary to contain various projectors for a certain Irrep
@@ -54,6 +55,7 @@ class ReductRep(Irrep):
                               # third...])]} 
         self.basis_normortho   = {}  # it is orthogonal and normalized. Structure of this attribute is same with that of
                                      # self.basis
+        self.iprint = iprint
 
 
     def irrep_normortho2(self):
@@ -83,22 +85,25 @@ class ReductRep(Irrep):
         vectors_normortho = []
         vectors_new_all = []
         for i in range(self.dim):
-            print('basis before norm :\n',vectors_new[i])
+            print('basis before norm :\n',vectors_new[i]) if self.iprint ==3 else 0
             vectors_normortho_t = RepBasisNorm(list(vectors_new[i]))
-            print('basis before norm :\n',vectors_normortho_t)
+            print('basis before norm :\n',vectors_normortho_t) if self.iprint ==3 else 0
             vectors_new_all += list(vectors_normortho_t)
             vectors_normortho.append(vectors_normortho_t)
        
         # check for the orthogonalize of all the produced basis of a certain irreps
-        print(' ')
-        print(10*'* * ')
-        print(5*' ','>>> orthogonality[all] of the whole newly produced basis of the irrep ...')
+        if self.iprint == 3:
+            print(' ')
+            print(10*'* * ')
+            print(5*' ','>>> orthogonality[all] of the whole newly produced basis of the irrep ...')
         vectors_new_all_copy = copy.deepcopy(vectors_new_all)
-        print('check before entering isOrthogonal :\n')
-        print('                   vectors_new_all :',vectors_new_all)
-        print('                   vectors_new_all_copy :',vectors_new_all_copy)
-        is_allortho = isOrthogonal(vectors_new_all,vectors_new_all_copy) 
-        print(5*' ','All is Orthogonal ?   ',is_allortho)
+        if self.iprint == 3:
+            print('check before entering isOrthogonal :\n')
+            print('                   vectors_new_all :',vectors_new_all)
+            print('                   vectors_new_all_copy :',vectors_new_all_copy)
+        is_allortho = isOrthogonal(vectors_new_all,vectors_new_all_copy,self.iprint) 
+        if self.iprint == 3:
+            print(5*' ','All is Orthogonal ?   ',is_allortho)
 
         
         # assign self.basis_normortho
@@ -108,17 +113,20 @@ class ReductRep(Irrep):
             for j in range(self.dim):
                 basis_or_t.append(vectors_normortho[j][i])
             self.basis_normortho[name_t] = copy.deepcopy(basis_or_t)
-        print(' ')
-        print(10*'* * ')
-        print(5*' ','>>> orthogonality[multi] between different multi ...')
+        if self.iprint == 3:
+            print(' ')
+            print(10*'* * ')
+            print(5*' ','>>> orthogonality[multi] between different multi ...')
         for imul1 in range(self.multi):
             name1 = 'multi' + str(imul1)
             for imul2 in range(self.multi):
                 name2 = 'multi' + str(imul2)
-                print(5*'--')
-                is_ortho_multi = isOrthogonal(self.basis_normortho[name1],self.basis_normortho[name2])
-                print('Ortho: multi1 = ',imul1,' multi2 = ',imul2,'  -> ',is_ortho_multi)
-                print('')
+                if self.iprint == 3:
+                    print(5*'--')
+                is_ortho_multi = isOrthogonal(self.basis_normortho[name1],self.basis_normortho[name2],self.iprint)
+                if self.iprint == 3:
+                    print('Ortho: multi1 = ',imul1,' multi2 = ',imul2,'  -> ',is_ortho_multi)
+                    print('')
 
 
 
@@ -160,7 +168,7 @@ class ReductRep(Irrep):
             for idim in range(1,self.dim):
                 vectors_n_t = np.dot(Schmidt_umat,np.array(vectors_org[idim]))
                 vectors_new.append(vectors_n_t)
-                isOrtho_no = isOrthogonal(list(vectors_n_t),list(vectors_n_t))
+                isOrtho_no = isOrthogonal(list(vectors_n_t),list(vectors_n_t),self.iprint)
                 print(" * check for orthogonality of new produced basis")
                 print(5*' ',10*'- .. ')
                 print(5*' ',' *[New Ortho] dim =',idim)
@@ -195,22 +203,28 @@ class ReductRep(Irrep):
         '''
         for imul in range(self.multi):
             name_key = 'multi'+str(imul)
-            print('')
-            print('')
-            print(20*'=')
-            print('* * imul :',imul)
+            if self.iprint == 3:
+                print('')
+                print('')
+                print(20*'=')
+                print('* * imul :',imul)
             phi_t1 = self.make_phi1(imul,op[0].shape[0],irrep_prev)
-            print(20*'- -') 
-            print('* WAVE(phi1) Done :  of multi<',imul,'> of <',self.label,'> is :',np.linalg.norm(phi_t1))
+            if self.iprint == 3 :
+                print(20*'- -') 
+                print('* WAVE(phi1) Done :  of multi<',imul,'> of <',self.label,'> is :',np.linalg.norm(phi_t1))
             basis_list = []
-            basis_list += phi_t1
+            basis_list += phi_t1 # phi_t1 is list of numpy.ndarray
             if self.dim > 1 :
                 phi_other = self.make_phi_other(phi_t1[0],imul)
                 basis_list += phi_other
-            print('* basis set for multi',imul,'of ',self.label,'is\n',basis_list)
-            is_multi_ortho = isOrthogonal(basis_list,basis_list)
-            print('* is this set basis orthogonal to each other :',is_multi_ortho)
-            print(20*'- -') 
+#           if self.iprint == 2 :
+            if self.iprint >= 2 :
+                print('* basis set for multi',imul,'of ',self.label,'is\n',basis_list)
+            is_multi_ortho = isOrthogonal(basis_list,basis_list,self.iprint)
+#           if self.iprint == 2 :
+            if self.iprint >= 2 :
+                print('* is this set basis orthogonal to each other :',is_multi_ortho)
+                print(20*'- -') 
             self.basis[name_key] = basis_list
                 
 
@@ -239,11 +253,13 @@ class ReductRep(Irrep):
         name_ip = 'P00'
         isindependt_all = [False]
         for i in range(ndim):
-            print("\n",10*'*','\n',2*'* ','i :',i)
+            if self.iprint == 3 :
+                print("\n",10*'*','\n',2*'* ','i :',i)
             func_all    = np.zeros(ndim,dtype=np.complex128)
             func_all[i] = complex(1.0)
 #           for ip in range(1):
-            print("\n",'. . . . . . . . . ','\n','i(P_ii)=',0,'|','\n','. . . . . . . . . ')
+            if self.iprint == 3 :
+                print("\n",'. . . . . . . . . ','\n','i(P_ii)=',0,'|','\n','. . . . . . . . . ')
             Proj    = self.projector[name_ip]
             func_1  = np.einsum('ji,i->j',Proj,func_all)
             # to make sure phi2 = P10 phi1 has nonzero element
@@ -259,7 +275,8 @@ class ReductRep(Irrep):
                 func_1  = RepBasisNorm(func_1) 
 #               isindependt_all = []
                 basis_set = []
-                print(5*'- ','\n','   check independence ...')
+                if self.iprint == 3:
+                    print(5*'- ','\n','   check independence ...')
                 if int(multi_now) > 0 :
                     for imul in range(multi_now):
                         mul_name  = 'multi' + str(imul)
@@ -271,12 +288,14 @@ class ReductRep(Irrep):
                                 mul_name = 'multi' + str(imul)
                                 basis_set += irr.basis[mul_name]
                 if basis_set == [] :
-                    print(5*'  ','NO NEED : because imul=',multi_now,'len(irrep_prev)=',len(irrep_prev))
+                    if self.iprint == 3:
+                        print(5*'  ','NO NEED : because imul=',multi_now,'len(irrep_prev)=',len(irrep_prev))
                     label_list.append(np.sum(np.abs(func_1)))
                     isindependt_all += [True]
                 else :
-                    label_t, independt   = isindependent(func_1,basis_set) 
-                    print('is independent? : ',independt)
+                    label_t, independt   = isindependent(func_1,basis_set,self.iprint) 
+                    if self.iprint == 3:
+                        print('is independent? : ',independt)
                     isindependt_all += independt
                     if not independt :
                         label_list.append(float(0.0))
@@ -315,9 +334,8 @@ class ReductRep(Irrep):
         
         if any(isindependt_all) :
             pos_target = label_list.index(max(label_list))
-            print(10*'*-')
-            print('* the proper phi for phi1 of mulit=',multi_now,'of irreps ',self.label,'is',pos_target)
-            print(10*'*-')
+            if self.iprint >= 2 :
+                print('    ---> the proper phi for phi1 of mulit=',multi_now,'of irreps ',self.label,'is',pos_target)
             func_all    = np.zeros(ndim,dtype=np.complex128)
             func_all[pos_target] = complex(1.0)
             Proj    = self.projector[name_ip]
@@ -360,7 +378,8 @@ class ReductRep(Irrep):
             proj      = self.projector[name_proj]
 #           basis_t   = np.dot(proj,phi_1)
             basis_t   = np.einsum('ji,i->j',proj,phi_1)
-            print('* WAVE(phi'+str(i+2)+') Done :  of multi<',multi_now,'> of <',self.label,'> is :',np.linalg.norm(basis_t))
+            if self.iprint >= 2 :
+                print('* WAVE(phi'+str(i+2)+') Done :  of multi<',multi_now,'> of <',self.label,'> is :',np.linalg.norm(basis_t))
             basis_other.append(basis_t)
         return basis_other
 
@@ -406,7 +425,8 @@ class ReductRep(Irrep):
             for i in range(self.dim-1):
                 P_normal = np.zeros((dim_op,dim_op),dtype=np.complex128)
                 name = 'P' + str(i+1) + str(i)
-                print(5*'** ','check for projectors matrix value : ')
+                if self.iprint == 3 :
+                    print(5*'** ','check for projectors matrix value : ')
                 for j in range(self.nrank):
 #                   print(10*' ')
 #                   print('Projectors : j=',j)
@@ -417,7 +437,8 @@ class ReductRep(Irrep):
                     P_normal[:,:] += self.dim/self.nrank * np.conjugate(self.matrices[j][i+1,i])*op[j]
                 self.projector[name] = P_normal
 #       print('Pro name   :',name)
-        print('>>> Projectors  :',self.projector)
+        if self.iprint == 3 :
+            print('>>> Projectors  :',self.projector)
 
 
 
@@ -542,7 +563,7 @@ class MBPG():
     '''
     after get all the prerequisite, a class of essential information of point group need by atomic's problem is desired
     '''
-    def __init__(self, nop, op):
+    def __init__(self, nop, op,iprint):
         '''
         attributes:
             nop [I]       : rank of the point group
@@ -552,11 +573,12 @@ class MBPG():
             basis [list]  : to contain basis 
 #           irrep [list]  : a list of Irrep 
         '''
-        self.nop   = nop
-        self.op    = op
-        self.ham   = None 
-        self.subs  = []
-        self.dim   = 100  
+        self.nop    = nop
+        self.op     = op
+        self.iprint = iprint
+        self.ham    = None 
+        self.subs   = []
+        self.dim    = 100  
         self.op_irrep = []
 #       self.irrep = []
 #       for ir in irrep:
@@ -579,8 +601,8 @@ class MBPGsubs(MBPG):
     '''
     every subspace of N will have their own information when do reduciton
     '''
-    def __init__(self, nop, op):
-        super().__init__(nop, op)
+    def __init__(self, nop, op, iprint):
+        super().__init__(nop, op, iprint)
         self.irrep = []
         self.allbasis = {}
         self.allbasis['matrix'] = []# due to it's a list, thus the eigenwaves arranged in rows
@@ -617,8 +639,8 @@ class MBPGsubs(MBPG):
             dump_2dc(self.dim,self.dim,self.ham,path='ham.dat',prec=1.0e-6)
             dump_2dc(self.dim,self.dim,self.ham - ham_new,path='ham_diff.dat',prec=1.0e-6)
             raise ValueError('error in check_symm_ham and error value : ',error)
-        else :
-            print('Check for the symmetry of hamiltonian :',error)
+        elif self.iprint >= 2 :
+            print('    ---> success : Check for the symmetry of hamiltonian :',error)
 
     # transfrom operators into basis of irreps after collecting bases
 #   def trans_operators(self,trans):
@@ -634,7 +656,8 @@ class MBPGsubs(MBPG):
     # transfrom ham into basis of irreps after collecting bases
     def trans_ham(self,trans=True):
         if trans :
-            print('Check : the transformation matrix(basis matrix) in rows :\n',self.allbasis['matrix'])
+            if self.iprint == 3 :
+                print('Check : the transformation matrix(basis matrix) in rows :\n',self.allbasis['matrix'])
             self.ham_irrep = tran_op(self.ham,np.transpose(np.array(self.allbasis['matrix'])))
         else :
             self.ham_irrep = copy.deepcopy(self.ham)
@@ -642,11 +665,11 @@ class MBPGsubs(MBPG):
 
 
     # diagonalize ham after transforming the hamiltonian into irreps bases
-    def diag_ham(self,trans=True):
+    def diag_ham2(self,trans=True):
         self.ham_eig, self.ham_evc = np.linalg.eigh(self.ham_irrep)
         print(20*'** ')
         print('')
-        check_ham_wave(self.ham_irrep,self.ham_eig,self.ham_evc)
+        check_ham_wave(self.ham_irrep,self.ham_eig,self.ham_evc,self.iprint)
         print('Check for the symmetry-kept eigenfunctions :')
         print('[index from 0]')
         Bmat_col = np.transpose(np.array(self.allbasis['matrix']))
@@ -686,48 +709,9 @@ class MBPGsubs(MBPG):
         print('')
         print(20*'** ')
 
-#    # diagonalize ham after transforming the hamiltonian into irreps bases
-#    def diag_ham(self,trans=True):
-#        self.ham_eig, self.ham_evc = np.linalg.eigh(self.ham_irrep)
-##       self.ham_eig, self.ham_evc = np.linalg.eigh(0.5*(self.ham+self.ham_irrep))
-#        print(20*'** ')
-#        print('')
-#        check_ham_wave(self.ham_irrep,self.ham_eig,self.ham_evc)
-#        print('Check for the symmetry-kept eigenfunctions :')
-#        print('[index from 0]')
-#        Bmat_col = np.transpose(np.array(self.allbasis['matrix']))
-#        print('op : \n',self.op)
-#        if trans :
-#            ham_evc_original = np.dot(Bmat_col,self.ham_evc)
-#            print('Check ham :\n',np.dot(np.conjugate(np.transpose(ham_evc_original)),np.dot(self.ham,ham_evc_original)))
-#        for idim in range(self.dim):
-#            for iop in range(self.nop):
-#                if trans :
-#                    op = np.dot(np.dot(np.transpose(np.conjugate(Bmat_col)),self.op[iop]),Bmat_col)
-#                    print('operators in irreps basis :\n',iop)
-#                    print(op)
-#                    op1 = copy.deepcopy(self.op[iop])
-##                   op = np.dot(np.dot(np.transpose(Bmat),self.op[iop]),np.conjugate(Bmat))
-#                else :
-#                    op = copy.deepcopy(self.op[iop])
-#                if trans :
-#                    error_ham_irr = np.sum(np.abs(np.dot(self.ham_irrep,op)-np.dot(op,self.ham_irrep)))
-#                    wave_new = np.einsum('ij,j->i',op1,ham_evc_original[:,idim])
-##                   wave_new = np.einsum('ij,j->i',op1,ham_evc_original[:,idim])
-#                else :
-#                    error_ham_irr = np.sum(np.abs(np.dot(self.ham_irrep,op)-np.dot(op,self.ham_irrep)))
-#                    wave_new = np.einsum('ij,j->i',op,self.ham_evc[:,idim])
-#                for jdim in range(self.dim):
-#                    if trans :
-#                        inner_product = np.dot(np.conjugate(ham_evc_original[:,jdim]),wave_new)
-#                    else :
-#                        inner_product = np.dot(np.conjugate(self.ham_evc[:,jdim]),wave_new)
-#                    if np.abs(inner_product) > 1.0e-6  :
-#                        print('WARNING:  m=',jdim,'O_i',iop,'n=',idim,'<m|O_i|n> =',inner_product)
-#                        print(5*' ','error_ham_irr =',error_ham_irr)
-#                        print(5*' ')
-#        print('')
-#        print(20*'** ')
+    # diagonalize ham after transforming the hamiltonian into irreps bases
+    def diag_ham(self,trans=True):
+        self.ham_eig, self.ham_evc = np.linalg.eigh(self.ham_irrep)
 
     # to collect all the basis after self.Cal_ReductRep()
     def collect_basis(self):
@@ -746,16 +730,16 @@ class MBPGsubs(MBPG):
         true_pre_irrep = [] # to contain the irreps which has self.multi greater than one for sake of reduction for the
                             # following irreps
         for ir in irrep_input:
-            irr = ReductRep()
+            irr = ReductRep(iprint=self.iprint)
             irr.label = copy.deepcopy(ir.label)
             irr.dim   = copy.deepcopy(ir.dim)
             irr.matrices   = copy.deepcopy(ir.matrices) #[np.transpose(imat) for imat in ir.matrices]
             irr.characters = copy.deepcopy(ir.characters)
-            print('>>>>> irrep :',irr.label)
+            print('>>>>> irrep :',irr.label) if self.iprint >= 2 else 0
             irr.multi      = irr.cal_multi(self.op)
-            print('>>>>> multi :',irr.multi)
+            print('      multi :',irr.multi) if self.iprint >= 2 else 0
             irr.make_projector(self.op)
-            print('>>>>> projectors :\n',irr.projector.keys())
+            print('      projectors :\n',irr.projector.keys()) if self.iprint >= 2 else 0
             if irr.multi > 0 :
 #               irr.reduction(self.op,self.irrep)
                 irr.reduction(self.op,true_pre_irrep)
@@ -767,7 +751,8 @@ class MBPGsubs(MBPG):
         self.getirrepindex()
         #
         # test for the orthogonal of different irreps
-        print(5*"* ",' orthogonality[irreps] between different irreps')
+        show_sub4header('orthogonality[irreps] of all bases')
+        isOrtho_tmp = [True]
         for i in range(1,len(self.irrep)):
             if self.irrep[i].multi == 0 :
                 continue
@@ -782,11 +767,15 @@ class MBPGsubs(MBPG):
                             for jmul in range(self.irrep[j].multi):
                                 name_j  = 'multi' + str(jmul)
                                 basis_j = self.irrep[j].basis[name_j]
-                                isOrtho = isOrthogonal(basis_i,basis_j)
-                                print('')
-                                print('multi:',imul,'of',self.irrep[i].label,'<-->','multi:',jmul,'of',self.irrep[j].label,\
-                                ' : ', isOrtho)
-                                print('')
+                                isOrtho = isOrthogonal(basis_i,basis_j,self.iprint)
+                                isOrtho_tmp.append(isOrtho)
+                                if self.iprint == 3:
+                                    print('')
+                                    print('multi:',imul,'of',self.irrep[i].label,'<-->','multi:',jmul,'of',self.irrep[j].label,\
+                                            ' : ', isOrtho)
+                                    print('')
+        if all(isOrtho_tmp) :
+            print(4*' '+'---> '+'success')
     # should execute after the self.diag_ham has been executed
     def cal_degeneracy(self):
         '''
@@ -814,10 +803,12 @@ class MBPGsubs(MBPG):
                 if i == self.dim -1 :
                     deginfo_t['degeneracy'] = degeneracy_cnt
                     self.deginfo.append(deginfo_t)
-            print('deginfo -> i(band index,from 0)=',i)
-            print(5*' ',deginfo_t)
+            if self.iprint == 3:
+                print('deginfo -> i(band index,from 0)=',i)
+                print(5*' ',deginfo_t)
         self.deg = deg_cnt 
-        print('deg = ',self.deg)
+        if self.iprint == 3: 
+            print('deg = ',self.deg)
         # check the self-consistence:
         if self.deg != len(self.deginfo):
             print('self.deg = ',self.deg,'len(self.deginfo) = ',len(self.deginfo))
@@ -832,19 +823,16 @@ class MBPGsubs(MBPG):
                         break
                 if deg_irreplabel != None :
                     break
-        print('Degeneracy:  \n',self.deg)
-        print('Degeneracy(info):  \n',self.deginfo)
+        if self.iprint == 3 :
+            print('Degeneracy:  \n',self.deg)
+            print('Degeneracy(info):  \n',self.deginfo)
        
     def check_irrepbasis_final(self):
         '''
         aim : check whether it's the basis of irreps which we want after all 
               bases have been found.
         '''
-        isTrue = []
-        print(20*'**')
-        print('')
-        print(' * Check for bases of irreps ')
-        print('')
+        isTrue = [True]
         for ir in self.irrep :
             if ir.multi > 0:
                 for imul in range(ir.multi):
@@ -855,24 +843,30 @@ class MBPGsubs(MBPG):
                     for iop in range(self.nop):
 #                       op = np.transpose(self.op[iop])
                         op = self.op[iop]
-                        rep_matrix  = find_rep(basis_set,op) 
+                        rep_matrix  = find_rep(basis_set,op,self.iprint) 
                         rep_ir_imul.append(rep_matrix)
                         error = np.sum(np.abs(rep_matrix - ir.matrices[iop]))
                         if np.abs(error) > 1.0e-6:
+                            isTrue.append(False)
                             print('Error : ir=',ir.label,'imul=',imul,'iop',iop,'character:',ir.matrices[iop],'rep',rep_matrix,' error =',error)
                             print('   op:\n',op)
                             print('   basis_set:\n',basis_set)
                             raise ValueError('ERROR: basis is not complete : ', error)
                         else:
-                            print('Success : ir=',ir.label,'imul=',imul,'iop',iop,'character:',ir.matrices[iop],'rep',rep_matrix,' error =',error)
-        print(20*'**')
-                    
+                            isTrue.append(True)
+                            if self.iprint >= 2:
+                                print('Success : ir=',ir.label,'imul=',imul,'iop',iop,'character:',ir.matrices[iop],'rep',rep_matrix,' error =',error)
+        if all(isTrue) :
+            print('\n',4*' '+'--->'+'PASS')
+        else :
+            print(4*' '+'--->'+'Failed')
 
     # decompose eigen wavefunction mixing irreps belongs to different columns of a irrep because of energy degeneracy
     def decompose_degenerate(self):
         '''
         aim : decompose eigen wavefunction mixing irreps belongs to different columns of a irrep because of energy degeneracy
         '''
+        logic_all = []
         self.ham_evc_decompose = copy.deepcopy(self.ham_evc)
         for i in range(self.deg):
             basis_list = []
@@ -884,8 +878,9 @@ class MBPGsubs(MBPG):
                 label_dict[str(cnt_dict)] = j
 
             work_array  = np.transpose(np.array(basis_list))
-            print('work array :',work_array)
-            print('Deg(from 0)             : ', i)
+            if self.iprint == 3:
+                print('work array :',work_array)
+                print('Deg(from 0)             : ', i)
 #           print('the shape of work_array : ',work_array.shape)
 
             len_sp = self.ham_evc.shape[0]
@@ -893,7 +888,8 @@ class MBPGsubs(MBPG):
             cnt_list = []
             for jj in range(len(basis_list)): 
 #               print('IMPORTANT CHECK : ',basis_list[jj][0:5])
-                print('     band index : ',label_dict[str(jj)])
+                if self.iprint == 3 :
+                    print('     band index : ',label_dict[str(jj)])
                 label_t = None
                 logic_t = True
                 cnt_t   = 0
@@ -907,20 +903,22 @@ class MBPGsubs(MBPG):
                                 logic_t = False
                 logic_list.append(logic_t)
                 cnt_list.append(cnt_t)
-            print('logical                 : ',logic_list,'  Deg: ',cnt_list)
+            print('logical                 : ',logic_list,'  Deg: ',cnt_list) if self.iprint >= 2 else 0
             # decompose : 
             # check whether its nonzero elements only lies in a single irreps space
             # if yes : pass
             # if no  : error
             irrep_t     = self.irrep[self.irrepindex[self.deginfo[i]['irrep']]] 
-            print(' irrep now :',irrep_t)
+            if self.iprint == 3:
+                print(' irrep now :',irrep_t)
             if irrep_t.dim > 1:
                 if not all(logic_list) :
                     ibase = int(0)
                     for kk in range(self.irrepindex[self.deginfo[i]['irrep']]):
                         if self.irrep[kk].multi > 0:
                             ibase += self.irrep[kk].multi * self.irrep[kk].dim
-                    print('ibase for ',irrep_t.label, 'is : ',ibase)
+                    if self.iprint == 3:
+                        print('ibase for ',irrep_t.label, 'is : ',ibase)
                     find_label = False
                     for k in range(irrep_t.multi):
                         basis_array = np.zeros((irrep_t.dim,irrep_t.dim),dtype=np.complex128)
@@ -928,32 +926,37 @@ class MBPGsubs(MBPG):
                             for ideg in range(irrep_t.dim):
                                 basis_array[icol,ideg] = work_array[ibase+icol,ideg]
                         # judge whether the basis_array is reversible?
-                        print('>>> matrix start to make decomposition :\n',basis_array)
+                        if self.iprint == 3:
+                            print('>>> matrix start to make decomposition :\n',basis_array)
                         if np.abs(np.linalg.det(basis_array)) > 1e-3 :
                             find_label = True
-                            print(">>> index for multi of basis decomposition(from 0) :",k)
+                            print(">>> index for multi of basis decomposition(from 0) :",k) if self.iprint == 3 else 0
                             break
                         elif k == irrep_t.multi -1 :
                             print(">>> decomposition(from 0) : Failed in multi=",k,'/',irrep_t.multi,'determinant =',np.linalg.det(basis_array))
                             print(">>> index for multi of basis decomposition(from 0) : Failed")
                             raise ValueError(">>> Can not find proper matrix to decompose")
                         else:
-                            print(">>> decomposition(from 0) : Failed in multi=",k,'/',irrep_t.multi,'determinant =',np.linalg.det(basis_array))
+                            if self.iprint >= 2:
+                                print(">>> decomposition(from 0) : Failed in multi=",k,'/',irrep_t.multi,'determinant =',np.linalg.det(basis_array))
                         ibase += int(irrep_t.dim * (k+1))
                     if find_label :
-                        print('>>> decomposition matrix original :\n',basis_array)
-                        print('>>> decomposition matrix :\n',np.linalg.inv(basis_array))
+                        if self.iprint ==3 :
+                            print('>>> decomposition matrix original :\n',basis_array)
+                            print('>>> decomposition matrix :\n',np.linalg.inv(basis_array))
                         work_array_new = np.dot(work_array,np.linalg.inv(basis_array))
                     self.ham_evc_decompose[:,self.deginfo[i]['start']:self.deginfo[i]['start']+self.deginfo[i]['degeneracy']] =\
                             copy.deepcopy(work_array_new[:,:])
                 else :
-                    print(">>> basis decomposition(from 0) : no Need(True for not mixing between different columns)")
-                    print(">>>   order of degeneracy space :", i)
+                    if self.iprint >= 2:
+                        print(">>> basis decomposition(from 0) : no Need(True for not mixing between different columns)")
+                        print(">>>   order of degeneracy space :", i)
                     self.ham_evc_decompose[:,self.deginfo[i]['start']:self.deginfo[i]['start']+self.deginfo[i]['degeneracy']] =\
                             copy.deepcopy(work_array[:,:])
 
             elif irrep_t.dim == 1:
-                print(">>> basis decomposition(from 0) : no Need(1D irrep)")
+                if self.iprint >= 2 :
+                    print(">>> basis decomposition(from 0) : no Need(1D irrep)")
                 self.ham_evc_decompose[:,self.deginfo[i]['start']:self.deginfo[i]['start']+self.deginfo[i]['degeneracy']] =\
                         copy.deepcopy(work_array[:,:])
         self.ham_evc = copy.deepcopy(self.ham_evc_decompose)
@@ -963,7 +966,6 @@ class MBPGsubs(MBPG):
         aim : check whether the nonzero elements only lies in a single irreps space and do not cross between different
               irreps space
         '''
-        print('CHECK: the degeneracy of irreps :')
         len_sp = self.ham_evc.shape[0]
         logic_list = []
         for j in range(len_sp):
@@ -979,11 +981,10 @@ class MBPGsubs(MBPG):
                         if label_t != self.allbasis['irreplabel'][i][0]:
                             logic_t = False
             logic_list.append(logic_t)
-            print(5*' ','j =',j,'deg=',cnt_t,'logic:',logic_t,'label = ',label_t)
+            if self.iprint >= 2 :
+                print(5*' ','j =',j,'deg=',cnt_t,'logic:',logic_t,'label = ',label_t)
         if all(logic_list) == True or logic_list == []:
-            print(20*'** ')
-            print(10*' ','* the basis only in a single irreps and can do the docomposition in energy degenerate space')
-            print(20*'** ')
+            print('\n',4*' '+'---> PASS')
         else:
             raise ValueError("ERROR in PG.MBPGsubs.check_basis_irreps1")
 
@@ -994,11 +995,12 @@ class MBPGsubs(MBPG):
         aim : check whether the nonzero elements only lies in a single column of a single irreps space and do not cross between different
               irreps space and different columns in a irreps.
         '''
-        print('CHECK: the degeneracy of irreps :')
         len_sp = self.ham_evc.shape[0]
+        logic_list = [True]
         for j in range(len_sp):
 #           print('IMPORTANT CHECK : ',self.ham_evc[0:5,j])
-            print('             band index : ',j)
+            if self.iprint ==3 :
+                print('             band index : ',j)
             cnt_t   = 0
             label_t = None
             logic_t = True
@@ -1010,16 +1012,25 @@ class MBPGsubs(MBPG):
                     else:
                         if label_t != self.allbasis['irreplabel'][i]:
                             logic_t = False
-            print(5*' ','j =',j,'deg=',cnt_t,'logic:',logic_t,'label = ',label_t)
+            logic_list.append(logic_t)
+            if self.iprint >= 2 :
+                print(5*' ','j =',j,'deg=',cnt_t,'logic:',logic_t,'label = ',label_t)
+        if all(logic_list) : 
+            print('\n',4*' '+'---> PASS')
+        else :
+            print('\n',4*' '+'---> Failed')
+
 
 
     # this method is valid to use only in the case that the self.irrep.projectors() has been assigned
     def check_projectors(self):
-        print("")
-        print(10*'* *')
-        print(' * I am checking the properties of projectors : W^i_{np}W^j_{qr} = W^i_{nr}\delta_{ij}\delta_{pq}')
-        print(10*'* *')
-        print("")
+        proj_is_good_all = [True]
+        if self.iprint >= 2 :
+            print("")
+            print(10*'* *')
+            print('    ---> I am checking the properties of projectors : W^i_{np}W^j_{qr} = W^i_{nr}\delta_{ij}\delta_{pq}')
+            print(10*'* *')
+            print("")
         for i in range(len(self.irrep)):
             Proi = []
             for idim in range(self.irrep[i].dim):
@@ -1049,11 +1060,16 @@ class MBPGsubs(MBPG):
                             proj_is_good.append(False)
                         else : 
                             proj_is_good.append(True)
-                print('i = ',self.irrep[i].label,'j = ',self.irrep[j].label)
+                proj_is_good_all += proj_is_good
+                print('i = ',self.irrep[i].label,'j = ',self.irrep[j].label) if self.iprint == 3 else 0
                 if all(proj_is_good) == True or proj_is_good == [] :
-                    print('     : beautiful~~~', proj_is_good)
+                    print('     : beautiful~~~', proj_is_good) if self.iprint >= 2 else 0
                 else:
-                    print('     : sad ~~~',proj_is_good)
+                    print('     : sad ~~~',proj_is_good) if self.iprint >= 2 else 0
+        if all(proj_is_good_all) == True:
+            print(4*' '+'---> Pass')
+        else:
+            print('\n',4*' '+'---> Failed')
 
 
 #   def Fock2irreps(self):
@@ -1101,7 +1117,7 @@ class TranOrb():
              of both "shell" and "fun_o" because we will automatically produce the fun_o in the order of wannier90's
              convention
     '''
-    def __init__(self,umat,su2,npoly,dim=3,npower=2,nfunc=3,shell=None,func_o={}):
+    def __init__(self,umat,su2,npoly,dim=3,npower=2,nfunc=3,shell=None,func_o={},iprint=1):
         '''
         input: 
                mapbasis : map index (the index of "x2" is "200", and index of "xyz" is "111") to their position in the
@@ -1115,6 +1131,7 @@ class TranOrb():
         self.su2       = su2
         self.shell     = shell
         self.func_o    = func_o
+        self.iprint    = iprint
         self.mapbasis  = {}
         self.nop       = len(self.umat)
         self.vec_oldbasis = None
@@ -1125,12 +1142,14 @@ class TranOrb():
         assert self.dim > 0, "dim should great than zero as input of tran_orbital"
         assert self.func_o != {} or self.shell != None, "you should give at least one of <shell> and <func_o>"
 #
-        self.show_attribute()
+        self.show_attribute() if self.iprint == 3 else 0
         self.def_func()
         self.make_mapbasis()
-        print('mapbasis=',self.mapbasis)
+        if self.iprint == 3:
+            print('mapbasis=',self.mapbasis)
         self.make_vec_oldbasis()
-        print('vec_oldbasis=',self.vec_oldbasis)
+        if self.iprint == 3:
+            print('vec_oldbasis=',self.vec_oldbasis)
         self.make_func_new()
         self.make_umat_so()
 
@@ -1155,16 +1174,17 @@ class TranOrb():
             dump_2dc(ndim,ndim,soc_matrix,path='soc.dat',prec=1.0e-6)
             dump_2dc(ndim,ndim,soc_matrix - soc_new,path='soc_diff.dat',prec=1.0e-6)
             raise ValueError('error in check_symm_soc and error value : ',error)
-        else :
-            print('success : Check for the symmetry of soc :',error)
+        elif self.iprint >= 2 :
+            print('    ---> success : Check for the symmetry of soc :',error)
 
     def check_symm_crystal(self,crystal_matrix):
         ndim = int(self.nfunc)
         crystal_new = np.zeros((ndim,ndim),dtype=np.complex128)
-        print('ndim:\n',ndim)
-        print('nop:\n',self.nop)
-        print('self.umat_new:\n',self.umat_new[0].shape)
-        print('crystal_matrix:\n',crystal_matrix.shape)
+        if self.iprint == 3:
+            print('ndim:\n',ndim)
+            print('nop:\n',self.nop)
+            print('self.umat_new:\n',self.umat_new[0].shape)
+            print('crystal_matrix:\n',crystal_matrix.shape)
         # below is proper for double group but not for single group
         for i in range(int(self.nop/2)):
             # note rep_vec is R^{-1}
@@ -1177,8 +1197,8 @@ class TranOrb():
             dump_2dc(ndim,ndim,crystal_matrix[0:2*ndim:2,0:2*ndim:2],path='cfd.dat',prec=1.0e-6)
             dump_2dc(ndim,ndim,crystal_matrix[0:2*ndim:2,0:2*ndim:2] - crystal_new,path='cfd_diff.dat',prec=1.0e-6)
             raise ValueError('error in check_symm_crystal and error value : ',error)
-        else :
-            print('Check for the symmetry of crystal :',error)
+        elif self.iprint >= 2 :
+            print('    ---> success : Check for the symmetry of crystal :',error)
 
     def show_attribute(self):
         print('dim=',self.dim)
@@ -1353,7 +1373,7 @@ class TranOrb():
                 # I will write a new function to decompose 
 #               print('ifunc=',ifunc,'ipoly=',ipoly)
 #               print('vec_ifunc\n',vec_ifunc)
-                rep_new_tmp = decompose_vec(self.vec_oldbasis,vec_ifunc)
+                rep_new_tmp = decompose_vec(self.vec_oldbasis,vec_ifunc,iprint = self.iprint)
 #               the components arrange as rows
                 umat_new[ifunc,:] = rep_new_tmp
             umat_new_list.append(umat_new)

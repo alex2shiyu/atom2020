@@ -6,7 +6,7 @@
 ! purpose : build basis in "ntots" subspace or global space
 ! comment : 
 !=========================================================================!
-  subroutine atomic_make_basis(norbs, totncfgs, ncfgs, ntots, nmin, nmax, nstat, basis, invcd, invsn)
+  subroutine atomic_make_basis(norbs, totncfgs, ncfgs, ntots, nmin, nmax, nstat, iprint, basis, invcd, invsn)
 
      implicit none
 
@@ -33,6 +33,8 @@
 
 ! number of configuration
      integer, intent(in) :: nstat(0:norbs)
+
+     integer, intent(in) :: iprint
 
 ! decimal representation of Fock basis
      integer, intent(out) :: basis(ncfgs)
@@ -75,6 +77,7 @@
 !f2py intent(in) nmin
 !f2py intent(in) nmax
 !f2py intent(in) nstat
+!f2py intent(in) iprint
 !f2py intent(out) basis
 !f2py intent(out) invsn
 !f2py intent(out) invcd
@@ -140,7 +143,9 @@
      enddo ! over ibas={1,ncfgs} loop
 
 ! dump atomic configurations to file "atom.basis.in"
-     call atomic_dump_basis(norbs,totncfgs, ncfgs, basis, invsn, invcd)
+     if (iprint .ge. 1)then
+         call atomic_dump_basis(norbs,totncfgs, ncfgs, basis, invsn, invcd)
+     endif
 
      return
   end subroutine atomic_make_basis

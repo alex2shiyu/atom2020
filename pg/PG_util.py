@@ -7,7 +7,7 @@ import sys
 import copy
 
 
-def check_ham_wave(ham,eig,wave):
+def check_ham_wave(ham,eig,wave,iprint=1):
     '''
     aim : check whether the three inputs are consistent with each other.
     input : 
@@ -27,7 +27,8 @@ def check_ham_wave(ham,eig,wave):
             elif i != j and np.abs(value) < 1.0e-10:
                 istrue.append(True)
             else:
-                print(5*' ','<',i,'|',j,'> =',value)
+                if iprint == 3:
+                    print(5*' ','<',i,'|',j,'> =',value)
                 istrue.append(False)
     if all(istrue) :
         print(5*' ','success')
@@ -43,7 +44,7 @@ def check_ham_wave(ham,eig,wave):
 #    if len(basis) == 1:
 #        return basis
 #    else:
-def find_rep(basis,op):
+def find_rep(basis,op,iprint=1):
     '''
     aim    : find the representation matrix for <op> in the set of <basis> 
     op     : [numpy.ndarray] operators in a certain space, should transform functions in columns 
@@ -69,18 +70,19 @@ def find_rep(basis,op):
         if error < 1.0e-6 :
             is_close.append(True)
         else:
-            print('ERROR: <find_rep>')
-            print('basis[i],i=',irow)
-            print('    \n',basis[irow])
-            print('op\n',op)
-            print('basis_after_trans:\n',basis_after_trans)
-            print('basis_recover:\n',basis_recover)
-            print('error = ',error)
+            if iprint == 3:
+                print('ERROR: <find_rep>')
+                print('basis[i],i=',irow)
+                print('    \n',basis[irow])
+                print('op\n',op)
+                print('basis_after_trans:\n',basis_after_trans)
+                print('basis_recover:\n',basis_recover)
+                print('error = ',error)
             is_close.append(False)
     if not all(is_close):
         raise ValueError('ERROR: basis is not complete : ', error)
     else:
-        print('<find_rep> success in <check_irrepbasis_final>')
+        print('<find_rep> success in <check_irrepbasis_final>') if iprint == 3 else 0
         return rep
 
 
@@ -118,51 +120,59 @@ def RepBasisNorm(basis):
         raise ValueError("RepBasisNorm just support <list of numpy.ndarray> and <numpy.ndarray> not yet this type: ",type(basis))
 
 
-def isindependent(basis,basis_set):
+def isindependent(basis,basis_set,iprint=1):
     '''
     to judge whether the function <basis> is independent to the other basis set
     input : 
         basis : 1D numpy-ndarray
         basis_set : list of 1D numpy-ndarray or just numpy-ndarray
     '''
-    print('  ')
-    print('   entering isindependent ....')
+    if iprint == 3 :
+        print('  ')
+        print('-> entering isindependent ....')
     if isinstance(basis_set, list):
         isOrtho = True
         param_tmp = np.zeros(len(basis_set),dtype=np.complex128)
         basis_t   = copy.deepcopy(basis)
-        print('      I will show1 the components ...')
+        if iprint == 3:
+            print('      I will show1 the components ...')
         for ir in range(len(basis_set)):
             param_tmp[ir] = np.dot(np.conjugate(basis_set[ir]),basis)/np.dot(np.conjugate(basis_set[ir]),basis_set[ir])
-            print('       i=',ir,'components = ',param_tmp[ir])
+            if iprint == 3:
+                print('       i=',ir,'components = ',param_tmp[ir])
             basis_t = basis_t - param_tmp[ir] * basis_set[ir]
-            print('basis    :\n',basis)
-            print('basis_set:\n',basis_set)
-            print('para     :\n',param_tmp)
-            print('results  :\n',basis_t)
+            if iprint == 3:
+                print('basis    :\n',basis)
+                print('basis_set:\n',basis_set)
+                print('para     :\n',param_tmp)
+                print('results  :\n',basis_t)
         if np.sum(np.abs(basis_t)) < 1.0 : 
             isOrtho = False
-            print('         Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
+            if iprint == 3:
+                print('         Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
         else :
-            print('     Not Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
-        print("")
+            if iprint == 3:
+                print('     Not Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
         return [np.sum(np.abs(basis_t))], [isOrtho]
     elif isinstance(basis_set,np.ndarray):
-        print('      I will show2 the components ...')
+        if iprint == 3:
+            print('      I will show2 the components ...')
         isOrtho = True
         basis_t   = copy.deepcopy(basis)
         param_tmp = np.dot(np.conjugate(basis_set),basis)
         basis_t   = basis_t - param_tmp * basis_set
         if np.sum(np.abs(basis_t)) < 0.1 : 
             isOrtho = False
-            print('    Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
+            if iprint == 3:
+                print('    Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
         else :
-            print('Not Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
+            if iprint == 3:
+                print('Not Sad (isindependent value) : ',np.sum(np.abs(basis_t)))
         return [np.sum(np.abs(basis_t))],[isOrtho]
     else:
         raise ValueError("Just support list of numpy-1Darray or numpy-1Darray not yet :",type(basis_set))
 
-def isOrthogonal(basis,basis_set):
+def isOrthogonal(basis,basis_set,iprint=1):
     '''
     to judge whether the function <basis> is orthogonal to the other basis set
     input : 
@@ -171,12 +181,13 @@ def isOrthogonal(basis,basis_set):
     '''
     if isinstance(basis, np.ndarray) and isinstance(basis_set, list):
         isOrtho = [True for i in range(len(basis_set))]
-        print("")
         for ir in range(len(basis_set)):
-            print(5*'-')
-            print('max_value:',np.max(np.abs(basis)),np.max(np.abs(basis_set[ir])))
+            if iprint == 3:
+                print(5*'-')
+                print('max_value:',np.max(np.abs(basis)),np.max(np.abs(basis_set[ir])))
             if np.abs(np.dot(np.conjugate(basis),basis_set[ir])) > 1.0E-6:
-                print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set[ir])))
+                if iprint == 3:
+                    print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set[ir])))
                 isOrtho[ir] = False
             else :
 #           print('wave1:\n',basis)
@@ -185,20 +196,24 @@ def isOrthogonal(basis,basis_set):
         return isOrtho
     elif isinstance(basis, np.ndarray) and isinstance(basis_set,np.ndarray):
         isOrtho = True
-        print(5*'-')
-        print('max_value:',np.max(np.abs(basis)),np.max(np.abs(basis_set)))
+        if iprint == 3:
+            print(5*'-')
+            print('max_value:',np.max(np.abs(basis)),np.max(np.abs(basis_set)))
         if np.abs(np.dot(np.conjugate(basis),basis_set)) > 1.0E-6:
-            print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set)))
+            if iprint == 3:
+                print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set)))
             isOrtho = False
         else:
             print('Not sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(basis),basis_set)))
-        print('wave1:\n',basis)
-        print('wave2:\n',basis_set)
-        print('isOrtho value:',np.abs(np.dot(np.conjugate(basis),basis_set)))
+        if iprint == 3:
+            print('wave1:\n',basis)
+            print('wave2:\n',basis_set)
+            print('isOrtho value:',np.abs(np.dot(np.conjugate(basis),basis_set)))
         return isOrtho
     elif isinstance(basis,list) and isinstance(basis_set,list):
-        print('basis:\n',basis)
-        print('basis_set:\n',basis_set)
+        if iprint == 3:
+            print('basis:\n',basis)
+            print('basis_set:\n',basis_set)
         isOrtho = True
         cnt1 = 0
         cnt2 = 0
@@ -207,34 +222,42 @@ def isOrthogonal(basis,basis_set):
             cnt2 = 0
             for ir2 in basis_set:
                 cnt2 += 1
-                print(5*'-')
-                print('ir1=',cnt1,' ir2=',cnt2)
-                print('max_value:',np.max(np.abs(ir1)),np.max(np.abs(ir2)))
-                print('ir1=\n',ir1)
-                print('ir2=\n',ir2)
+                if iprint == 3:
+                    print(5*'-')
+                    print('ir1=',cnt1,' ir2=',cnt2)
+                    print('max_value:',np.max(np.abs(ir1)),np.max(np.abs(ir2)))
+                    print('ir1=\n',ir1)
+                    print('ir2=\n',ir2)
                 if np.array_equal(ir1,ir2):
-                    print('-----> equal')
+                    if iprint == 3:
+                        print('-----> equal')
                     continue 
                 elif np.abs(np.dot(np.conjugate(ir1),ir2)) > 1.0E-6:
-                    print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),ir2)))
+                    if iprint == 3:
+                        print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),ir2)))
                     isOrtho = False
                 else:
-                    print('Not sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),ir2)))
-                print('')
+                    if iprint == 3:
+                        print('Not sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),ir2)))
+                        print('')
         return isOrtho
     elif isinstance(basis,list) and isinstance(basis_set,np.ndarray):
         isOrtho = True
         for ir1 in basis:
-            print(5*'-')
-            print('max_value:',np.max(np.abs(ir1)),np.max(np.abs(basis_set)))
+            if iprint == 3:
+                print(5*'-')
+                print('max_value:',np.max(np.abs(ir1)),np.max(np.abs(basis_set)))
             if np.array_equal(ir1,basis_set):
-                print('-----> equal')
+                if iprint == 3:
+                    print('-----> equal')
                 continue 
             elif np.abs(np.dot(np.conjugate(ir1),basis_set)) > 1.0E-6:
-                print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),basis_set)))
+                if iprint == 3:
+                    print('Sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),basis_set)))
                 isOrtho = False
             else:
-                print('Not sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),basis_set)))
+                if iprint == 3:
+                    print('Not sad (isOrtho value) : ',np.abs(np.dot(np.conjugate(ir1),basis_set)))
         return isOrtho
     else:
         raise ValueError("Just support list of numpy-1Darray or numpy-1Darray not yet :",type(basis_set))
@@ -327,7 +350,7 @@ def Point_ID(sch):
         return int(32)
 
 
-def decompose_vec(basis_vec, target_vec):
+def decompose_vec(basis_vec, target_vec, iprint = 1):
     '''
     aim   : I will decompose the target target_vec into a linear combination of basis_vec
     input : basis_vec : ndarray[drow*dcol] 
@@ -358,7 +381,8 @@ def decompose_vec(basis_vec, target_vec):
     check_o = np.einsum('ij,j->i', basis_vec, rep_new)
     error = np.abs(target_vec - check_o)
     if error.sum() < 1.0E-6:
-        print('>>> decomposition succeed ...')
+        if iprint == 3:
+            print('>>> decomposition succeed ...')
         return rep_new
     else:
         print("error=\n",error)

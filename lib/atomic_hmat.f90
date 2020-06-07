@@ -6,7 +6,7 @@
 ! purpose : construct atomic hamiltonian matrix
 ! comment : 
 !=========================================================================!
-  subroutine atomic_make_hmtrx(norbs, totncfgs, ncfgs, state, invcd, invsn, eimp, umat, hmat)
+  subroutine atomic_make_hmtrx(norbs, totncfgs, ncfgs, state, invcd, invsn, eimp, umat, iprint, hmat)
 
      implicit none
 
@@ -34,6 +34,8 @@
 
 ! general coulomb interaction matrix
      complex(kind=8), intent(in) :: umat(norbs, norbs, norbs, norbs)
+
+     integer, intent(in) :: iprint
 
 ! Hamiltonian matrix
      complex(kind=8), intent(out) :: hmat(ncfgs, ncfgs)
@@ -73,6 +75,7 @@
 !f2py intent(in)  invcd
 !f2py intent(in)  eimp
 !f2py intent(in)  umat
+!f2py intent(in)  iprint
 !f2py intent(out) hmat
 !f2py depend(ncfgs)       state
 !f2py depend(totncfgs)    invsn
@@ -201,14 +204,16 @@
 
      enddo ! over jbas={1,ncfgs} loop
 
-     open(112, file='test-hamilt.dat', status='unknown')
-     do jbas=1,ncfgs
-         do ibas=1,ncfgs
-             if (abs(hmat(ibas, jbas)) .lt. 1E-6) cycle
-             write(112, '(2i8, 2f17.10)') ibas, jbas, hmat(ibas, jbas)
-         enddo ! over ibas={1,ncfgs} loop
-     enddo ! over jbas={1,ncfgs} loop
-     close(112)
-!    call atomic_dump_hmtrx(ncfgs, hmat)
+     if (iprint .eq. 3)then
+         open(112, file='test-hamilt.dat', status='unknown')
+         do jbas=1,ncfgs
+             do ibas=1,ncfgs
+                 if (abs(hmat(ibas, jbas)) .lt. 1E-6) cycle
+                 write(112, '(2i8, 2f17.10)') ibas, jbas, hmat(ibas, jbas)
+             enddo ! over ibas={1,ncfgs} loop
+         enddo ! over jbas={1,ncfgs} loop
+         close(112)
+!        call atomic_dump_hmtrx(ncfgs, hmat)
+     endif
      return
   end subroutine atomic_make_hmtrx

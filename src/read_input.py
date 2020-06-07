@@ -5,6 +5,7 @@ from module.mod_read import read_2dc
 from wanntb.soc import atom_hsoc
 from wanntb.tran import tran_op, tmat_c2r
 from scipy.special import perm
+from src.atomic_subs import show_subheader
 
 class Atom():
     """
@@ -25,7 +26,7 @@ class Atom():
              soc_mat    [complex128] : soc matrix(single particles)
              cfd_mat    [complex128] : cfd matrix(single particles)
     """
-    def __init__(self,norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_type):
+    def __init__(self,norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_type,iprint):
         self.norb = norb
         self.nmin = nmin
         self.nmax = nmax
@@ -46,6 +47,9 @@ class Atom():
         self.totncfgs = None # 2^norb, set this value just because f2py can not coye with 2**norb as the dimension of
                              # input parameters
         self.onsite   = None
+        self.iprint   = iprint # 1 means very less output information which is normal useage, 2 is output mode with high
+                          # level of verbosity which corresponding to full debugging which will make the storage of 
+                          # output up to several GBs. 
 
     @staticmethod
     def from_incar(incar_file = 'atom2020.incar',cemat_file='atom2020.cemat.in',amat_file='atom2020.amat.in'):
@@ -86,6 +90,7 @@ class Atom():
         vpm_type    = None
         basis_tran  = None
         amat        = None
+        iprint      = 1
         try:
             with open(incar_file, 'r') as f:
                 fileread = f.readlines()
@@ -121,6 +126,8 @@ class Atom():
                         basis_tran = line1.split()[1]
                     elif line1[0:8] == "vpm_type" :
                         vpm_type = np.int32(line1.split()[1])
+                    elif line1[0:6] == "iprint" :
+                        iprint = np.int32(line1.split()[1])
                     elif line1 == '':
                         print("omit a blank line")
                     elif line1[0] in ['#','!','%']:
@@ -146,13 +153,13 @@ class Atom():
                 spin_t = np.identity(2,dtype=np.complex128)
                 cfd_mat = np.kron(cfd_mat_t,spin_t)
 #               cfd_mat = tran_op(cfd_mat,amat)
-                return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_type)
+                return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_type,iprint)
             except IOError:
                 print("File:" + "\"" +cemat_file+ "\"" + " doesn't exist!")
         else : 
 #           cfd_mat = None
             cfd_mat = np.zeros((norb,norb),dtype=np.complex128)
-            return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_type)
+            return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_type,iprint)
    
     def make_instance(self):
         self.make_ncfgs()
@@ -254,8 +261,8 @@ class Atom():
         print('self.int_val:\n',    self.int_val)
         print('self.soc_type:\n',   self.soc_type)
         print('self.soc_val:\n',    self.soc_val)
-        print('self.soc_mat:\n',    self.soc_mat)
-        print('self.cfd_mat:\n',    self.cfd_mat)
-        print('self.onsite:\n',     self.onsite)
+        print('self.soc_mat:\n',    self.soc_mat) if self.iprint >= 2 else 0
+        print('self.cfd_mat:\n',    self.cfd_mat) if self.iprint >= 2 else 0
+        print('self.onsite:\n',     self.onsite) if self.iprint >= 2 else 0
         print('self.point_group:\n',self.point_group)
         print('self.vpm_type:\n',   self.vpm_type)

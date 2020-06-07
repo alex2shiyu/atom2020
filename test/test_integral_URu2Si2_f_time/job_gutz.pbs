@@ -1,0 +1,82 @@
+#!/bin/bash
+
+#PBS -N test
+#PBS -l nodes=1:ppn=1
+#PBS -o jobrun.out
+#PBS -e jobrun.err
+#PBS -q super
+#PBS -l walltime=240:00:00
+
+#source /public/software/profile.d/mpi_intelmpi-2017.4.239.sh
+#source /public/software/profile.d/compiler_intel-compiler-2017.5.239.sh
+
+#source /share/home/pengsy/.bashrc 
+export LD_LIBRARY_PATH=/share/home/pengsy/soft/mpich-install/lib:$LD_LIBRARY_PATH
+export LD_PRELOAD=/share/home/pengsy/anaconda3/lib/libmkl_core.so:/share/home/pengsy/anaconda3/lib/libmkl_sequential.so
+
+source activate py369
+
+#python=/share/home/pengsy/anaconda3/bin/python
+
+#python --version >> out.dat
+# where is your binary file
+#sypmain=/share/home/pengsy/soft/gutzexe/v2.62/main
+sypmain=/share/home/pengsy/work/atom2020/src/main.py
+#sypmain=./test_SLSQP.py
+# EXE=/public/software/apps/vasp/intelmpi/5.4.1/vasp_gam
+# EXE=/public/software/apps/vasp/intelmpi/5.4.1/vasp_ncl
+#EXE=/public/software/apps/vasp/intelmpi/5.4.1/vasp_std
+
+#####
+#cd $PBS_O_WORKDIR
+#mpirun=/public/home/sypeng/soft/intel-install/compilers_and_libraries_2019.5.281/linux/mpi/intel64/bin/mpirun
+#export OMP_NUM_THREADS=12
+#ulimit -s unlimited
+#export OMP_STACKSIZE=1g
+#ncpu_tot=`cat $PBS_NODEFILE | wc -l`
+#node_list=`cat $PBS_NODEFILE | sort | uniq`
+#node_num=`cat $PBS_NODEFILE | uniq | wc -l`
+#nthread=$OMP_NUM_THREADS
+#ncpu=`expr ${ncpu_tot} / ${nthread}`
+#np_per_node=`expr $ncpu_tot / $node_num / $nthread `
+#echo "ncpu_tot =" $ncpu_tot
+#echo "node_num =" $node_num
+#echo "nthread  =" $nthread
+#
+#rm -f machinesfile
+#for i in $node_list ; do
+##    echo ${i}" slots="${np_per_node} >> machinesfile
+#    echo ${i}":"${np_per_node} >> machinesfile
+#    done
+#
+#    echo Job started at `date`
+#    mpirun  -machinefile machinesfile -np $ncpu $sypmain
+##    mpirun  -np $ncpu $sypmain
+#    echo Job finished at `date`
+
+#####
+
+# run the job
+cd $PBS_O_WORKDIR
+
+#mpirun=/public/home/sypeng/soft/intel-install/compilers_and_libraries_2019.5.281/linux/mpi/intel64/bin/mpirun
+mpirun=/share/home/pengsy/soft/mpich-install/bin/mpirun
+export OMP_NUM_THREADS=1
+ulimit -s unlimited
+export OMP_STACKSIZE=1g
+NP=`cat $PBS_NODEFILE | wc -l`
+
+node_list=`cat $PBS_NODEFILE | sort | uniq`
+#rm -f machinesfile
+#for i in $node_list ; do
+##    echo ${i}" slots="${np_per_node} >> machinesfile
+#    echo ${i}":36" >> machinesfile
+#    done
+echo Job starts at `date`
+
+#$mpirun -np $NP -machinefile $PBS_NODEFILE python $sypmain > out.dat 2>err
+python $sypmain > ./out.dat
+#$mpirun -machinefile machinesfile -np $NP $sypmain
+#$sypmain 
+
+echo Job ends at `date`

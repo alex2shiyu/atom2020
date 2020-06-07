@@ -9,7 +9,7 @@
 !   5          3               1->\uparrow             3\up        !
 !   6          3               0->\doarrow             3\do        !
 !------------------------------------------------------------------!
-subroutine atomic_make_cumat(norbs, Uc, Uv, Jz, Js, Jp, cumat )
+subroutine atomic_make_cumat(norbs, Uc, Uv, Jz, Js, Jp, iprint,cumat )
      implicit none
 ! number of orbits
      integer, intent(in) :: norbs
@@ -19,6 +19,7 @@ subroutine atomic_make_cumat(norbs, Uc, Uv, Jz, Js, Jp, cumat )
      real(kind=8), intent(in) :: Jz
      real(kind=8), intent(in) :: Js
      real(kind=8), intent(in) :: Jp
+     integer, intent(in) :: iprint
 ! general coulomb interaction matrix
      complex(kind=8), intent(out) :: cumat(norbs, norbs, norbs, norbs)
 
@@ -49,6 +50,7 @@ subroutine atomic_make_cumat(norbs, Uc, Uv, Jz, Js, Jp, cumat )
 !f2py intent(in) Jz 
 !f2py intent(in) Js 
 !f2py intent(in) Jp
+!f2py intent(in) iprint
 !f2py intent(out) cumat
 !f2py depend(norbs) cumat
 
@@ -117,19 +119,21 @@ subroutine atomic_make_cumat(norbs, Uc, Uv, Jz, Js, Jp, cumat )
      enddo bettaloop ! over betta={alpha+1,norbs} loop
      enddo alphaloop ! over alpha={1,norbs-1} loop
 
-     open(11, file='test-cumat.dat', status='unknown')
-     do alpha=1,norbs
-     do betta=1,norbs
-         do delta=1,norbs
-         do gamma=1,norbs
-             if ( abs(cumat(alpha, betta, delta, gamma)) .lt. 1e-6 ) cycle
-             write(11, '(4i8, 2f17.10)') alpha, betta, delta, gamma, &
-             cumat(alpha, betta, delta, gamma)
-         enddo ! over gamma={1,norbs} loop
-         enddo ! over delta={1,norbs} loop
-     enddo ! over betta={1,norbs} loop
-     enddo ! over alpha={1,norbs} loop
-     close(11)
+     if(iprint .eq. 3)then
+         open(11, file='test-cumat.dat', status='unknown')
+         do alpha=1,norbs
+         do betta=1,norbs
+             do delta=1,norbs
+             do gamma=1,norbs
+                 if ( abs(cumat(alpha, betta, delta, gamma)) .lt. 1e-6 ) cycle
+                 write(11, '(4i8, 2f17.10)') alpha, betta, delta, gamma, &
+                 cumat(alpha, betta, delta, gamma)
+             enddo ! over gamma={1,norbs} loop
+             enddo ! over delta={1,norbs} loop
+         enddo ! over betta={1,norbs} loop
+         enddo ! over alpha={1,norbs} loop
+         close(11)
+     endif
      return
 end subroutine atomic_make_cumat
 
@@ -146,7 +150,7 @@ end subroutine atomic_make_cumat
 
 ! coefficents matrix for generalized interaction U in orginal basis
      complex(kind=8), intent(in) :: cumat(norbs, norbs, norbs, norbs)
- 
+
 ! coefficents matrix for generalized interaction U in natural basis
      complex(kind=8), intent(out) :: cumat_t(norbs, norbs, norbs, norbs)
 

@@ -1,5 +1,5 @@
 !>>>>author:sypeng@iphy.ac.cn
-      subroutine gw_make_newui(num_orb,num_config,totncfgs,unitary_len,occ1,occ2,UNmtrxp00,basis,invcd,invsn,prec,UImtrxp00)
+      subroutine gw_make_newui(num_orb,num_config,totncfgs,unitary_len,occ1,occ2,UNmtrxp00,basis,invcd,invsn,iprint,prec,UImtrxp00)
       implicit none
 !     integer, external :: state_pick
       integer,      intent(in)   :: num_orb
@@ -12,6 +12,7 @@
       integer,      intent(in)   :: invcd(num_orb,num_config)
       integer,      intent(in)   :: invsn(0:totncfgs-1)
       complex(8),   intent(in)   :: UNmtrxp00(num_orb,num_orb) ! should transform in columns
+      integer,      intent(in)   :: iprint
       real(kind=8), optional     :: prec
       complex(8),   intent(out)  :: UImtrxp00(num_config,num_config)
 !
@@ -32,6 +33,7 @@
 !f2py intent(in) basis
 !f2py intent(in) invcd
 !f2py intent(in) invsn
+!f2py intent(in) iprint
 !f2py intent(in) prec
 !f2py intent(in) UNmtrxp00
 !f2py intent(out) UImtrxp00
@@ -111,11 +113,15 @@
 !!              write(15,*)'lgth',lgth
 !!          endif
 !           call code_tranp(occ,num_orb,long,lgth,code_last)
-            print *, '-------------------'
-            print *,'nmin-nmax:',occ_n,'ncfgs:',i
-            call code_tranp(occt,occt,num_orb,unitary_len,long1,lgth,cnt_flag,code_last)
-            print *, ''
-            print *, ''
+            if(iprint .eq. 3)then
+                print *, '-------------------'
+                print *,'nmin-nmax:',occ_n,'ncfgs:',i
+            endif
+            call code_tranp(occt,occt,num_orb,unitary_len,long1,lgth,iprint,cnt_flag,code_last)
+            if(iprint .eq. 3)then
+                print *, ''
+                print *, ''
+            endif
 !	        print *,"-----------test5-below-code-tranp--------------"
 !!          if(occt .eq. 7 .and. i .eq. num)then 
 !!              write(31,*)'cnt_flag',cnt_flag
@@ -159,7 +165,7 @@
 !     write(111,*)UImtrxp00
       end subroutine gw_make_newui
 !
-      recursive subroutine code_tranp(occ,n,num_orb,unitary_len,long,lgth,cnt_flag,code_last)
+      recursive subroutine code_tranp(occ,n,num_orb,unitary_len,long,lgth,iprint,cnt_flag,code_last)
 !         
       implicit none
       integer,   intent(in)    ::  occ
@@ -168,6 +174,7 @@
       integer,   intent(in)    ::  unitary_len
       integer,   intent(in)    ::  long(num_orb,num_orb)
       integer,   intent(in)    ::  lgth(num_orb)
+      integer,   intent(in)    ::  iprint
       integer,   intent(out)   ::  cnt_flag
       integer,   intent(out)   ::  code_last(unitary_len,num_orb)
 
@@ -227,8 +234,10 @@
 	      code_last=code_tmp
 	      cnt_flag=flg2
       end if 
-      print *, 'ORBth = ',n,'cnt_flag=',cnt_flag
-      call code_tranp(occ,n-1,num_orb,unitary_len,long,lgth,cnt_flag,code_last)
+      if(iprint .eq. 3)then
+          print *, 'ORBth = ',n,'cnt_flag=',cnt_flag
+      endif
+      call code_tranp(occ,n-1,num_orb,unitary_len,long,lgth,iprint,cnt_flag,code_last)
       end subroutine code_tranp
 
 
