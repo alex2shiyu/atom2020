@@ -10,7 +10,8 @@ gqn           5
 point_group   D4h
 space_group   139
 basis_tran    no
-vpm_type      1 
+vpm_symm      1 
+vpm_type      general general diagonal
 iprint        1
 
 #gqn:

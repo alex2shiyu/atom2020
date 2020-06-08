@@ -5,5 +5,9 @@ test_read          : succeed - test the reading of <atom2020.incar>
 test_fortran_array : succeed - test the difference between array(0:n) and array(1:n) when embeding from python code
 test_make_basis    : succeed - test making basis and Cg 
 test_make_hmat     : succeed - test making hmat
-test_pointgroup    : ing     - test class of point group, mainly test reading data with the help of yijiang's scripts and database
-test_tran_orbital  : ing     - test the transform matrix of operators of point group in the orbital space
+test_pointgroup    : succeed - test class of point group, mainly test reading data with the help of yijiang's scripts and database
+test_tran_orbital  : succeed - test the transform matrix of operators of point group in the orbital space
+.
+.
+.
+test_integral_URu2Si2_f_time : succeed - it's the most credible demo

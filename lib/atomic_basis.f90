@@ -143,7 +143,7 @@
      enddo ! over ibas={1,ncfgs} loop
 
 ! dump atomic configurations to file "atom.basis.in"
-     if (iprint .ge. 1)then
+     if (iprint .ge. 2)then
          call atomic_dump_basis(norbs,totncfgs, ncfgs, basis, invsn, invcd)
      endif
 

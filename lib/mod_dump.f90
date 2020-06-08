@@ -706,6 +706,79 @@
      close(40)
   end subroutine dump_2dc
 
+  subroutine dump_2di(a,b,mat,path,nline,ioflag,prec)
+      implicit none
+! the dimension of 3d matrix
+     integer,    intent(in)  :: a
+                 
+     integer,    intent(in)  :: b
+                 
+! the dump matrix
+     integer, intent(in) :: mat(a,b)
+
+! the dump path
+     character(len = *),  intent(in) :: path
+
+! first nline lines which are introduction not data
+        integer,    optional    :: nline
+
+! io flag: 1:replace, 2:append
+        integer,    optional    :: ioflag
+
+! control prec of output
+        real(kind=8),   optional    :: prec
+
+
+! local variables
+     integer :: iatm, ibase1, ibase2, iorb, jorb, korb
+     integer :: ioflag_, nline_
+        real(kind=8) :: prec_
+!f2py intent(in) a
+!f2py intent(in) b
+!f2py intent(in) nline
+!f2py intent(in) path
+!f2py intent(in) ioflag
+!f2py intent(in) prec
+!f2py intent(in) mat
+!f2py depend(a,b) mat
+
+
+! initial
+        ioflag_ = 1
+        nline_  = 0
+        prec_   = 1.0d-16
+        if(present(ioflag)) ioflag_ = ioflag
+        if(present(nline))  nline_  = nline
+        if(present(prec))   prec_   = prec
+        
+! key part
+        if(ioflag_ .eq. 2)then
+            open(40,file = path, access="append")
+        elseif(ioflag_ .eq. 1)then
+            open(40,file = path, status="replace")
+        else
+            open(40,file = path, status="replace")
+        endif
+        if(nline_ .gt. 0)then
+            do iorb =1, nline_
+                write(40,*) ''
+            enddo
+        else
+            continue
+        endif
+
+       do iatm= 1,a
+           do iorb = 1,b
+               if(abs(mat(iatm,iorb)) .gt. prec_)then
+                   write(40,'(2i10,7x,i10)')iatm,iorb,mat(iatm,iorb)
+               endif
+           enddo
+       enddo
+     close(40)
+
+
+  end subroutine dump_2di
+
   subroutine dump_2dr(a,b,mat,path,nline,ioflag,prec)
       implicit none
 ! the dimension of 3d matrix

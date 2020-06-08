@@ -11,8 +11,8 @@
 #source /public/software/profile.d/compiler_intel-compiler-2017.5.239.sh
 
 #source /share/home/pengsy/.bashrc 
-export LD_LIBRARY_PATH=/share/home/pengsy/soft/mpich-install/lib:$LD_LIBRARY_PATH
-export LD_PRELOAD=/share/home/pengsy/anaconda3/lib/libmkl_core.so:/share/home/pengsy/anaconda3/lib/libmkl_sequential.so
+#export LD_LIBRARY_PATH=/share/home/pengsy/soft/mpich-install/lib:$LD_LIBRARY_PATH
+#export LD_PRELOAD=/share/home/pengsy/anaconda3/lib/libmkl_core.so:/share/home/pengsy/anaconda3/lib/libmkl_sequential.so
 
 source activate py369
 

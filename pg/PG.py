@@ -44,7 +44,7 @@ class Irrep:
 class ReductRep(Irrep):
     def __init__(self,label='', dim=1, iprint=1):
         super().__init__(label='',dim=1)
-        self.multi      = 100 # dictionary to contain various projectors for a certain Irrep
+        self.multi      = 0 # dictionary to contain various projectors for a certain Irrep
         self.projector  = {}  # dictionary to contain various projectors for a certain Irrep
 #       self.reductstate= ''
         self.basis      = {}  # a dict of different set of basis for different <multi>, each set contain
@@ -569,52 +569,219 @@ class MBPG():
             nop [I]       : rank of the point group
             op  [list]    : a list of numpy.ndarray which is the matrix rep. of operators in natural basis, transfrom in
                             # columns
-            subs [list]   : to contain the instance of MBPGsubs of different subspace of \hat{N}
+            Nsubs [list]   : to contain the instance of MBPGsubs of different subspace of \hat{N}
             basis [list]  : to contain basis 
 #           irrep [list]  : a list of Irrep 
         '''
-        self.nop    = nop
-        self.op     = op
-        self.iprint = iprint
-        self.ham    = None 
-        self.subs   = []
-        self.dim    = 100  
+        self.nop      = nop
+        self.op       = op
+        self.iprint   = iprint
+        self.ham      = None 
+        self.ham_eig  = None
+        self.ham_evc  = None
+        self.ham_natural = None # which has been transfromed into natural basis
+        self.Nsubs    = []
+        self.dim      = 100  
         self.op_irrep = []
-#       self.irrep = []
-#       for ir in irrep:
-#           irr = Irrep()
-#           irr.label = ir.label
-#           irr.dim   = ir.dim
-#           irr.matrices = ir.matrices
-#           irr.characters = ir.characters
-#           self.irrep.append(irr) 
-#       print("check->irrep:\n",type(self.irrep[0])) 
-#       if len(self.irrep) > 0 :
-#           assert isinstance(self.irrep[0], Irrep)
+        self.vpmnum   = 0
+        self.vpmsy    = None
+
+    def show_results(self):
+        print('\n\n')
+        print(' *'+75*'='+'*')
+        print(' |'+29*' ','SymmAtom Results',28*' '+'|')
+        print(' *'+75*'='+'*')
+        print('{:>2}{:<20}{:>31}{:>23}{:>2}'.format('|','  DPG',' ',' ','|')) 
+        print(' |'+75*'-'+'|')
+        print('{:>2}{}{:<14}{:>35}{:>23}{:>2}'.format('|',2*' ','TotNumCfgs',':',self.dim,'|')) 
+        print('{:>2}{}{:<14}{:>35}{:>23}{:>2}'.format('|',2*' ','TotNumVpms',':',self.vpmnum,'|')) 
+        for nsubs in self.Nsubs :
+            print('{:>2}{}{:<20}{:>29}{:>23}{:>2}'.format('|','  ',11*'-',' ',' ','|')) 
+            print('{:>2}{:<20}{:>31}{:>23}{:>2}'.format('|','  N='+str(nsubs.nocc),' ',' ','|')) 
+            if nsubs.vpmtype[0] == 'g' :
+                print('{:>2}{}{:<14}{:>31}{:>23}{:>2}'.format('|',6*' ','NumCfgs',':',nsubs.dim,'|')) 
+                print('{:>2}{}{:<14}{:>31}{:>23}{:>2}'.format('|',6*' ','NumVpms',':',nsubs.vpmnum,'|')) 
+                print('{:>2}{}{:<14}{:>31}{:>23}{:>2}'.format('|',6*' ','-------',' ',' ','|')) 
+                for irr in nsubs.irrep :
+                    if irr.multi > 0 :
+                        print('{:>2}{}{:<14}{:>31}{:>23}{:>2}'.format('|',6*' ',irr.label,':',irr.multi,'|')) 
+            elif nsubs.vpmtype[0] == 'd' :
+                print('{:>2}{}{:<14}{:>31}{:>23}{:>2}'.format('|',6*' ','NumCfgs',':',nsubs.dim,'|')) 
+                print('{:>2}{}{:<14}{:>31}{:>23}{:>2}'.format('|',6*' ','NumVpms',':',nsubs.vpmnum,'|')) 
+                print('{:>2}{}{:<14}{:>31}{:>23}{:>2}'.format('|',6*' ','-------',' ',' ','|')) 
+                print('{:>2}{}{:<14}{:>54}{:>2}'.format('|',6*' ','diagonal vpms',' ','|')) 
+#           if nsubs != self.Nsubs[len(self.Nsubs)-1]:
+        # print number of total configurations and vpms
+
+        print(' *'+75*'-'+'*')
+# hamiltonian
+        print('{:>2}{:<20}{:>31}{:>23}{:>2}'.format('|','  Hamiltonain',' ',' ','|')) 
+        print(' |'+75*'-'+'|')
+        for nsubs in self.Nsubs :
+            print('{:>2}{:<20}{:>31}{:>23}{:>2}'.format('|','  N='+str(nsubs.nocc),' ',' ','|')) 
+            if nsubs.vpmtype[0] == 'g' :
+                for keys in nsubs.ham_evc_irrepindex['group'] :
+#                   print('{:>2}{}{:<8}{:<5}{:>36}{:>23}{:>2}'.format('|',6*' ',keys,':',nsubs.ham_evc_irrepindex['group'][keys],'|')) 
+#                   print('{:>2}{}{:<8}{:<4}'.format('|',6*' ',keys,':'),\
+#                           *(map('{0[1]}'.format, enumerate(nsubs.ham_evc_irrepindex['group'][keys]))),'{:>2}'.format('|')) 
+                    list_t = nsubs.ham_evc_irrepindex['group'][keys]
+                    dim_t = len(list_t)
+                    remainder_t = dim_t % 11
+                    if remainder_t == 0:
+                        times_t = int(dim_t/11)
+                    else :
+                        times_t = int(dim_t /11) + 1
+                    if remainder_t > 0:
+                        for i in range(11 - remainder_t):
+                            list_t.append(' ')
+                    ibase = int(0)
+                    for iline in range(times_t):
+                        if iline == 0 :
+                            print('{:>2}{}{:<8}{:<4}'.format('|',6*' ',keys,':'),end=' ')
+                        else :
+                            print(' |'+18*' ',end=' ')
+                        for icnt in range(11):
+                            print('{0:<{width}}'.format(list_t[icnt + ibase], width=4), end=' ')
+                        print('{:>2}'.format('|'))
+                        ibase = (iline+1)*11
+#                   print('{:>3}{:>3}{:>3}{:>3}{:>3}{:>3}{:>3}{:>3}{:>3}'.format(*(nsubs.ham_evc_irrepindex['group'][keys][0:10])),'{:>2}'.format('|')) 
+            elif nsubs.vpmtype[0] == 'd' :
+                print('{:>2}{}{:<14}{:>54}{:>2}'.format('|',6*' ','diagonal vpms',' ','|')) 
+        print(' *'+75*'='+'*')
+
 
     def show_attribute(self):
         print('nop:',self.nop)
         print('operators:\n',self.op)
 #       print('irreps:\n',self.irrep)
 
+    def collect_eig(self,nstat):
+        '''
+        aim : stack bases from self.Nsubs to an array
+        input : nstat ：length of every block(to check)
+        '''
+        
+        if len(nstat) == len(self.Nsubs):
+            ndim = sum(nstat)
+
+            self.ham_eig = np.zeros(ndim,dtype=np.float64)
+            ibase = int(0)
+            for i in range(len(nstat)):
+                self.ham_eig[ibase:ibase+int(nstat[i])] = self.Nsubs[i].ham_eig
+                ibase += int(nstat[i])
+        else :
+            raise ValueError('Error in collect_eig of MBPG :','len(nstat)=',len(nstat),'len(self.Nsubs)=',len(self.Nsubs))
+    
+    def collect_evc(self,nstat):
+        '''
+        aim : stack bases from self.Nsubs to an array
+        input : nstat ：length of every block(to check)
+        '''
+        
+        if len(nstat) == len(self.Nsubs):
+            ndim = sum(nstat)
+
+            self.ham_evc = np.zeros((ndim,ndim),dtype=np.complex128)
+            ibase = int(0)
+            for i in range(len(nstat)):
+                self.ham_evc[ibase:ibase+int(nstat[i]),ibase:ibase+int(nstat[i])] = self.Nsubs[i].ham_evc_natural
+                ibase += int(nstat[i])
+        else :
+            raise ValueError('Error in collect_evc of MBPG :','len(nstat)=',len(nstat),'len(self.Nsubs)=',len(self.Nsubs))
+    
+    def collect_ham(self,nstat):
+        '''
+        aim : stack bases from self.Nsubs to an array
+        input : nstat ：length of every block(to check)
+        '''
+        
+        if len(nstat) == len(self.Nsubs):
+            ndim = sum(nstat)
+
+            self.ham_natural = np.zeros((ndim,ndim),dtype=np.complex128)
+            ibase = int(0)
+            for i in range(len(nstat)):
+                self.ham_natural[ibase:ibase+int(nstat[i]),ibase:ibase+int(nstat[i])] = self.Nsubs[i].ham_natural
+                ibase += int(nstat[i])
+        else :
+            raise ValueError('Error in collect_ham of MBPG :','len(nstat)=',len(nstat),'len(self.Nsubs)=',len(self.Nsubs))
+    
+    def collect_vpm(self,nstat):
+        '''
+        aim : stack bases from self.Nsubs to an array
+        input : nstat ：length of every block(to check)
+        '''
+        self.vpmnum = int(0)
+        if len(nstat) == len(self.Nsubs):
+            ndim = sum(nstat)
+            if ndim != self.dim :
+                raise ValueError('Error in collect_vpm : dim =',ndim,'ncfgs =',self.dim)
+            self.vpmsy = np.zeros((ndim,ndim),dtype=np.int64)
+            ibase = int(0)
+            threshhold = int(0)
+            for i in range(len(nstat)):
+                vpmsy_copy = copy.deepcopy(self.Nsubs[i].vpmsy)
+                mask_array = vpmsy_copy > 0
+                vpmsy_copy[mask_array] += threshhold
+                self.vpmsy[ibase:ibase+int(nstat[i]),ibase:ibase+int(nstat[i])] = vpmsy_copy
+                ibase += int(nstat[i])
+                threshhold = np.max(self.vpmsy)
+                self.vpmnum += self.Nsubs[i].vpmnum
+        else :
+            raise ValueError('Error in collect_vpm of MBPG :','len(nstat)=',len(nstat),'len(self.Nsubs)=',len(self.Nsubs))
 class MBPGsubs(MBPG): 
     '''
     every subspace of N will have their own information when do reduciton
     '''
-    def __init__(self, nop, op, iprint):
+    def __init__(self, nop, op, nocc, iprint, vpmtype):
         super().__init__(nop, op, iprint)
+        self.nocc = nocc
         self.irrep = []
         self.allbasis = {}
         self.allbasis['matrix'] = []# due to it's a list, thus the eigenwaves arranged in rows
         self.allbasis['irreplabel'] = []
-        self.ham_irrep = np.zeros(op[0].shape,dtype=np.complex128)
-        self.ham_eig = None
-        self.ham_evc = None
+        self.ham_irrep = np.zeros(op[0].shape,dtype=np.complex128) if len(op) > 0 else None
+        self.ham_evc_natural = None # which has been transfromed into natural basis
+        self.ham_evc_irrepindex = {}
         self.deg     = 100
         self.deginfo = []
         self.irrepindex = {}
         self.ham_evc_decompose = []
-   
+        self.Focknatural = None
+        self.vpmtype = vpmtype  # str
+ 
+    def group_irrep_evc(self):
+        '''
+        aim : group evc with same irrep as well as same columns together which is convenient to make atom.vpmsy.in
+
+        note : here the keys is named with the index starting from 1 not 0 just for unambiguous output
+               GM5d_1 GM5d_2 ...
+        '''
+        self.ham_evc_irrepindex['group'] = {}
+        for i in range(len(self.ham_evc_irrepindex['sequential'])):
+            keys = self.ham_evc_irrepindex['sequential'][i][0] + '_' + str(self.ham_evc_irrepindex['sequential'][i][2]+1)
+            if keys in self.ham_evc_irrepindex['group'] :
+                self.ham_evc_irrepindex['group'][keys].append(i+1) 
+            else :
+                self.ham_evc_irrepindex['group'][keys] = [i+1]
+ 
+    def make_vpmsy(self):
+        self.vpmsy = np.zeros((self.dim,self.dim),dtype=np.int32)
+        if self.vpmtype[0] == 'g':
+            num_vpm = int(0)
+            for idict in dict.items(self.ham_evc_irrepindex['group']):
+                for idim in idict[1]:
+                    for jdim in idict[1]:
+                        num_vpm += 1
+                        self.vpmsy[idim-1,jdim-1] =  num_vpm
+        elif self.vpmtype[0] == 'd' :
+            num_vpm = int(0)
+            for idim in range(self.dim):
+                num_vpm += 1
+                self.vpmsy[idim,idim] = num_vpm
+        self.vpmnum = num_vpm
+
+
     def getirrepindex(self):
         '''
         aim   : to get the index in self.irrep
@@ -659,8 +826,10 @@ class MBPGsubs(MBPG):
             if self.iprint == 3 :
                 print('Check : the transformation matrix(basis matrix) in rows :\n',self.allbasis['matrix'])
             self.ham_irrep = tran_op(self.ham,np.transpose(np.array(self.allbasis['matrix'])))
+            print(4*' '+'---> transformation done.')
         else :
             self.ham_irrep = copy.deepcopy(self.ham)
+            print(4*' '+'---> not transformation.')
 
 
 
@@ -959,7 +1128,13 @@ class MBPGsubs(MBPG):
                     print(">>> basis decomposition(from 0) : no Need(1D irrep)")
                 self.ham_evc_decompose[:,self.deginfo[i]['start']:self.deginfo[i]['start']+self.deginfo[i]['degeneracy']] =\
                         copy.deepcopy(work_array[:,:])
-        self.ham_evc = copy.deepcopy(self.ham_evc_decompose)
+        if self.ham_evc.shape == self.ham_evc_decompose.shape :
+            for icnt in range(self.ham_evc_decompose.shape[1]):
+                self.ham_evc[:,icnt] =RepBasisNorm(self.ham_evc_decompose[:,icnt]) 
+        else :
+            raise ValueError('Error in decompose_degenerate: dim(self.ham_evc)=',self.ham_evc.shape,\
+                    'dim(self.ham_evc_decompose.shape)=',self.ham_evc_decompose.shape)
+#       self.ham_evc = copy.deepcopy(self.ham_evc_decompose)
 
     def check_basis_irreps1(self):
         '''
@@ -997,6 +1172,7 @@ class MBPGsubs(MBPG):
         '''
         len_sp = self.ham_evc.shape[0]
         logic_list = [True]
+        self.ham_evc_irrepindex['sequential'] = []
         for j in range(len_sp):
 #           print('IMPORTANT CHECK : ',self.ham_evc[0:5,j])
             if self.iprint ==3 :
@@ -1009,12 +1185,15 @@ class MBPGsubs(MBPG):
                     cnt_t += 1
                     if label_t == None:
                         label_t = self.allbasis['irreplabel'][i]
+                        self.ham_evc_irrepindex['sequential'].append(label_t)
                     else:
                         if label_t != self.allbasis['irreplabel'][i]:
                             logic_t = False
             logic_list.append(logic_t)
             if self.iprint >= 2 :
                 print(5*' ','j =',j,'deg=',cnt_t,'logic:',logic_t,'label = ',label_t)
+        if self.iprint >= 2 :
+            print('irreps info of eigen wavefunctions :\n',self.ham_evc_irrepindex['sequential'])
         if all(logic_list) : 
             print('\n',4*' '+'---> PASS')
         else :

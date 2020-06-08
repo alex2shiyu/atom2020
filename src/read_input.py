@@ -26,7 +26,7 @@ class Atom():
              soc_mat    [complex128] : soc matrix(single particles)
              cfd_mat    [complex128] : cfd matrix(single particles)
     """
-    def __init__(self,norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_type,iprint):
+    def __init__(self,norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_symm,vpm_type,iprint):
         self.norb = norb
         self.nmin = nmin
         self.nmax = nmax
@@ -42,6 +42,7 @@ class Atom():
         self.amat     = amat
         self.point_group = point_group
         self.space_group = int(space_group)
+        self.vpm_symm = vpm_symm
         self.vpm_type = vpm_type
         self.ncfgs    = None
         self.totncfgs = None # 2^norb, set this value just because f2py can not coye with 2**norb as the dimension of
@@ -68,7 +69,8 @@ class Atom():
             gqn       3 
             point_group C4v
             space_group 71
-            vpm_type    1
+            vpm_type    'general' 'general' 'diagonal'
+            vpm_symm    1
             -----
             #gqn:
             #1[pure]: n ;  
@@ -88,6 +90,7 @@ class Atom():
         gqn      = None
         point_group = None
         vpm_type    = None
+        vpm_symm    = None
         basis_tran  = None
         amat        = None
         iprint      = 1
@@ -124,8 +127,10 @@ class Atom():
                         space_group = int(line1.split()[1])
                     elif line1[0:10] == "basis_tran" :
                         basis_tran = line1.split()[1]
+                    elif line1[0:8] == "vpm_symm" :
+                        vpm_symm = np.int32(line1.split()[1])
                     elif line1[0:8] == "vpm_type" :
-                        vpm_type = np.int32(line1.split()[1])
+                        vpm_type = line1.split()[1:]
                     elif line1[0:6] == "iprint" :
                         iprint = np.int32(line1.split()[1])
                     elif line1 == '':
@@ -153,13 +158,13 @@ class Atom():
                 spin_t = np.identity(2,dtype=np.complex128)
                 cfd_mat = np.kron(cfd_mat_t,spin_t)
 #               cfd_mat = tran_op(cfd_mat,amat)
-                return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_type,iprint)
+                return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_symm,vpm_type,iprint)
             except IOError:
                 print("File:" + "\"" +cemat_file+ "\"" + " doesn't exist!")
         else : 
 #           cfd_mat = None
             cfd_mat = np.zeros((norb,norb),dtype=np.complex128)
-            return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_type,iprint)
+            return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_symm,vpm_type,iprint)
    
     def make_instance(self):
         self.make_ncfgs()
@@ -167,7 +172,7 @@ class Atom():
         self.make_soc()
         self.make_onsite()
         self.make_totncfgs()
-        self.show_incar()
+#       self.show_incar()
 
 #   def make_unitary_lenth(self):
 #       '''
@@ -253,16 +258,39 @@ class Atom():
             print("Are you sure the basis need not to transform to natural basis from atomic basis!")
 
     def show_incar(self):
-        print('self.norb:\n',self.norb)
-        print('self.nmin:\n',self.nmin)
-        print('self.nmax:\n',self.nmax)
-        print('self.ncfgs:\n',      self.ncfgs)
-        print('self.int_type:\n',   self.int_type)
-        print('self.int_val:\n',    self.int_val)
-        print('self.soc_type:\n',   self.soc_type)
-        print('self.soc_val:\n',    self.soc_val)
-        print('self.soc_mat:\n',    self.soc_mat) if self.iprint >= 2 else 0
-        print('self.cfd_mat:\n',    self.cfd_mat) if self.iprint >= 2 else 0
-        print('self.onsite:\n',     self.onsite) if self.iprint >= 2 else 0
-        print('self.point_group:\n',self.point_group)
-        print('self.vpm_type:\n',   self.vpm_type)
+        print('norb:\n',self.norb)
+        print('nmin:\n',self.nmin)
+        print('nmax:\n',self.nmax)
+        print('ncfgs:\n',      self.ncfgs)
+        print('int_type:\n',   self.int_type)
+        print('int_val:\n',    self.int_val)
+        print('soc_type:\n',   self.soc_type)
+        print('soc_val:\n',    self.soc_val)
+        print('soc_mat:\n',    self.soc_mat) if self.iprint >= 2 else 0
+        print('cfd_mat:\n',    self.cfd_mat) if self.iprint >= 2 else 0
+        print('onsite:\n',     self.onsite) if self.iprint >= 2 else 0
+        print('point_group:\n',self.point_group)
+        print('vpm_symm:\n',   self.vpm_symm)
+        print('vpm_type:\n',   self.vpm_type)
+
+    def show_results(self):
+        print('\n\n')
+        print(' *'+75*'='+'*')
+        print(' |'+27*' ','SymmAtom Parameters',27*' '+'|')
+        print(' *'+75*'='+'*')
+        print('{:>2}{}{:<20}{:>20}{:>32}{:>2}'.format('|',2*' ','norb',':',self.norb,'|')) 
+        print('{:>2}{}{:<20}{:>20}{:>32}{:>2}'.format('|',2*' ','nmin',':',self.nmin,'|')) 
+        print('{:>2}{}{:<20}{:>20}{:>32}{:>2}'.format('|',2*' ','nmax',':',self.nmax,'|')) 
+        print('{:>2}{}{:<20}{:>20}{:>32}{:>2}'.format('|',2*' ','ncfgs',':',self.ncfgs,'|')) 
+        print('{:>2}{}{:<20}{:>20}{:>32}{:>2}'.format('|',2*' ','int_type',':',self.int_type,'|')) 
+        print('{:>2}{}{:<20}{:>20}{:>32}{:>2}'.format('|',2*' ','int_value(ev) :',' ',' ','|')) 
+        for ir in self.int_val :
+            print('{:>2}{}{:<16}{:>20}{:>32}{:>2}'.format('|',6*' ',ir,':',self.int_val[ir],'|')) 
+        print('{:>2}{}{:<20}{:>20}{:>32}{:>2}'.format('|',2*' ','orbital',':',self.soc_type,'|')) 
+        print('{:>2}{}{:<20}{:>20}{:>32}{:>2}'.format('|',2*' ','soc_val(ev)',':',self.soc_val,'|')) 
+        print('{:>2}{}{:<20}{:>20}{:>32}{:>2}'.format('|',2*' ','point_group',':',self.point_group,'|')) 
+        print('{:>2}{}{:<20}{:>20}{:>32}{:>2}'.format('|',2*' ','vpm_symm',':',self.vpm_symm,'|')) 
+        print('{:>2}{}{:<20}{:>20}{:>32}{:>2}'.format('|',2*' ','vpm_type :',' ',' ','|')) 
+        for i in range(self.nmin,self.nmax + 1):
+            print('{:>2}{}{:<16}{:>20}{:>32}{:>2}'.format('|',6*' ','N ='+str(i),':',self.vpm_type[i-1],'|')) 
+        print(' *'+75*'='+'*')

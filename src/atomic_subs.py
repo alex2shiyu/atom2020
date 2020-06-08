@@ -6,43 +6,44 @@ from datetime import timedelta, datetime
 from time import gmtime, strftime
 
 def show_header():
-    print(15*' '+'*'+54*'-'+'*')
-    print(15*' '+'|'+54*' '+'|')
-    print(15*' '+'|'+23*' '+'SymmAtom'+23*' '+'|')
-    print(15*' '+'|'+54*' '+'|')
-    print(15*' '+'*'+54*'-'+'*')
-    print(15*' '+'|'+54*' '+'|')
+    print(11*' '+'*'+54*'-'+'*')
+    print(11*' '+'|'+54*' '+'|')
+    print(11*' '+'|'+23*' '+'SymmAtom'+23*' '+'|')
+    print(11*' '+'|'+54*' '+'|')
+    print(11*' '+'*'+54*'-'+'*')
+    print(11*' '+'|'+54*' '+'|')
     wel = 'welcome to Symmetry labeled atom subroutine'
-    print('{}{:<3}{:^50}{:>3}'.format(15*' ','|',wel,'|'))
+    print('{}{:<3}{:^50}{:>3}'.format(11*' ','|',wel,'|'))
     gitstr="git@github.com:alex2shiyu/atom2020.git"
-    print('{}{:<3}{:^50}{:>3}'.format(15*' ','|',gitstr,'|'))
-    print(15*' '+'|'+54*' '+'|')
-    print(15*' '+'|'+54*' '+'|')
-    print('{}{:<3}{:<50}{:>3}'.format(15*' ','|','Authors: ','|'))
-    print('{}{:<3}{:<50}{:>3}'.format(15*' ','|','       : Shiyu Peng (sypeng@iphy.ac.cn)','|'))
-    print('{}{:<3}{:<50}{:>3}'.format(15*' ','|','       : Xi Dai','|'))
-    print(15*' '+'|'+54*' '+'|')
-    print('{}{:<3}{:<50}{:>3}'.format(15*' ','|','This program is distributed in the hope that it','|'))
-    print('{}{:<3}{:<50}{:>3}'.format(15*' ','|','will be useful, but WITHOUT ANY WARRANTY; without','|'))
-    print('{}{:<3}{:<50}{:>3}'.format(15*' ','|','even the implied warranty of MERCHANTABILITY or','|'))
-    print('{}{:<3}{:<50}{:>3}'.format(15*' ','|','FITNESS FOR A PARTICULAR PURPOSE. See the GNU','|'))
-    print('{}{:<3}{:<50}{:>3}'.format(15*' ','|','General Public License for more details.','|'))
-    print(15*' '+'*'+54*'-'+'*')
-    print('{}{:<3}{:^50}{:>3}'.format(15*' ','|','Release: 1.0        4th June 2020','|'))
-    print(15*' '+'*'+54*'-'+'*')
+    print('{}{:<3}{:^50}{:>3}'.format(11*' ','|',gitstr,'|'))
+    print(11*' '+'|'+54*' '+'|')
+    print(11*' '+'|'+54*' '+'|')
+    print('{}{:<3}{:<50}{:>3}'.format(11*' ','|','Authors: ','|'))
+    print('{}{:<3}{:<50}{:>3}'.format(11*' ','|','       : Shiyu Peng (sypeng@iphy.ac.cn)','|'))
+    print('{}{:<3}{:<50}{:>3}'.format(11*' ','|','       : Xi Dai','|'))
+    print(11*' '+'|'+54*' '+'|')
+    print('{}{:<3}{:<50}{:>3}'.format(11*' ','|','This program is distributed in the hope that it','|'))
+    print('{}{:<3}{:<50}{:>3}'.format(11*' ','|','will be useful, but WITHOUT ANY WARRANTY; without','|'))
+    print('{}{:<3}{:<50}{:>3}'.format(11*' ','|','even the implied warranty of MERCHANTABILITY or','|'))
+    print('{}{:<3}{:<50}{:>3}'.format(11*' ','|','FITNESS FOR A PARTICULAR PURPOSE. See the GNU','|'))
+    print('{}{:<3}{:<50}{:>3}'.format(11*' ','|','General Public License for more details.','|'))
+    print(11*' '+'*'+54*'-'+'*')
+    print('{}{:<3}{:^50}{:>3}'.format(11*' ','|','Release: 1.0        4th June 2020','|'))
+    print(11*' '+'*'+54*'-'+'*')
     print('\n\n')
 
 
 def show_subheader(header):
-    print('*'+54*'='+'*')
-    print('{:<3}{:^50}{:>3}'.format('|','>>>'+header+'<<<','|'))
-    print('*'+54*'='+'*')
+    print('\n\n')
+    print(11*' '+'*'+54*'='+'*')
+    print('{}{:<3}{:^50}{:>3}'.format(11*' ','|','>>>'+header+'<<<','|'))
+    print(11*' '+'*'+54*'='+'*')
 
 def show_subsubheader(header):
     print('\n')
-    print(10*' ',40*'-')
-    print('{}{}{:^38}{}'.format(10*' ','*',header,'*'))
-    print(10*' ',40*'-')
+    print(18*' ',40*'-')
+    print('{}{}{:^38}{}'.format(19*' ','*',header,'*'))
+    print(18*' ',40*'-')
     print('\n')
 
 def show_sub3header(header):
@@ -70,6 +71,11 @@ def show_success():
 #   print(20*'*')
 
 
+def show_over():
+    print('\n\n')
+    print(' *'+75*'*'+'*')
+    print(' *'+31*' ','All Done !',32*' '+'*')
+    print(' *'+75*'*'+'*')
 
 def atomic_state(norbs):
     from scipy.special import comb
@@ -109,6 +115,8 @@ class atom_timer():
         self.dpg   = 0.0
         self.TranOrb = 0.0
         self.Nsubstot = 0.0
+        self.dump = 0.0
+        self.collect = 0.0
         self.Nsubs = []
         self.before = 0.0
         self.end   = 0.0
@@ -127,6 +135,7 @@ class atom_timer():
 
     
     def show(self):
+        print('\n\n')
         print(' *'+75*'='+'*')
         print(' |'+29*' ','TIME INFORMATION',28*' '+'|')
         print(' *'+75*'='+'*')
@@ -142,8 +151,10 @@ class atom_timer():
         print('{:>2}{:<20}{:>31}{:>23}{:>2}'.format('|','  Total of Nsubs',':',self.Nsubstot,'|')) 
         for itime in self.Nsubs :
             itime.show()
+        print('{:>2}{:<20}{:>31}{:>23}{:>2}'.format('|','  collect',':',self.collect,'|')) 
+        print('{:>2}{:<20}{:>31}{:>23}{:>2}'.format('|','  dump',':',self.dump,'|')) 
         print('{:>2}{:<20}{:>31}{:>23}{:>2}'.format('|','  end',':',self.end,'|')) 
-        print(' *'+75*'-'+'*')
+        print(' *'+75*'='+'*')
 
 
 class atom_timer_Nsubs(atom_timer):
@@ -152,15 +163,17 @@ class atom_timer_Nsubs(atom_timer):
     '''
     def __init__(self):
         super().__init__()
-        self.operators = 0.0
-        self.check_ham = 0.0
-        self.check_pro = 0.0
-        self.reduct    = 0.0
-        self.decompose = 0.0
-        self.check_irrepbasis = 0.0
+        self.operators = 0
+        self.check_ham = 0
+        self.check_pro = 0
+        self.reduct    = 0
+        self.tran2natural = 0
+        self.vpm = 0
+        self.decompose = 0
+        self.check_irrepbasis = 0
         self.noc       = 0
-        self.ham_trandiag = 0.0
-        self.check_eigenwave_irrep = 0.0
+        self.ham_trandiag = 0
+        self.check_eigenwave_irrep = 0
         
     def show(self):
         print('{:>2}{}{:<20}{:>25}{:>23}{:>2}'.format('|',6*' ','N = '+str(self.noc),' ',' ','|')) 
@@ -173,3 +186,5 @@ class atom_timer_Nsubs(atom_timer):
         print('{:>2}{}{:<25}{:>15}{:>23}{:>2}'.format('|',11*' ','trans, diag ham',':',self.ham_trandiag,'|')) 
         print('{:>2}{}{:<25}{:>15}{:>23}{:>2}'.format('|',11*' ','check eigenwave(symm)',':',self.check_eigenwave_irrep,'|')) 
         print('{:>2}{}{:<25}{:>15}{:>23}{:>2}'.format('|',11*' ','decomposition',':',self.decompose,'|')) 
+        print('{:>2}{}{:<25}{:>15}{:>23}{:>2}'.format('|',11*' ','trans to natural',':',self.tran2natural,'|')) 
+        print('{:>2}{}{:<25}{:>15}{:>23}{:>2}'.format('|',11*' ','make vpms',':',self.vpm,'|')) 
