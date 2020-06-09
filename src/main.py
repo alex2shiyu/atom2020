@@ -44,7 +44,8 @@ timedata.reset()
 show_subheader('Cumat')
 try :
     cumat   = atomic_make_cumat(atom1.norb,atom1.int_val['U'],atom1.int_val['Up'],atom1.int_val['Jz'],atom1.int_val['Js'],atom1.int_val['Jp'],atom1.iprint)
-    cumat_t = cumat #atomic_tran_cumat(atom1.norb,atom1.amat,cumat)
+    if 'diagonal' in atom1.vpm_type : 
+        cumat_t = atomic_tran_cumat(atom1.norb,atom1.amat,cumat)
 except :
     show_error('Cumat')
 else:
@@ -72,7 +73,12 @@ timedata.basis = timedata.count()
 timedata.reset()
 show_subheader('Hamiltonian')
 try :
-    hmat  =  atomic_make_hmtrx(atom1.norb,atom1.totncfgs,atom1.ncfgs,basis,invcd,invsn,atom1.onsite,cumat_t,atom1.iprint)
+    if 'diagonal' in atom1.vpm_type :
+        onsite_t = tran_op(atom1.onsite, atom1.amat)
+        hmat  =  atomic_make_hmtrx(atom1.norb,atom1.totncfgs,atom1.ncfgs,basis,invcd,invsn,atom1.onsite,cumat,atom1.iprint)
+        hmat_t=  atomic_make_hmtrx(atom1.norb,atom1.totncfgs,atom1.ncfgs,basis,invcd,invsn,onsite_t,cumat_t,atom1.iprint)
+    else :
+        hmat  =  atomic_make_hmtrx(atom1.norb,atom1.totncfgs,atom1.ncfgs,basis,invcd,invsn,atom1.onsite,cumat,atom1.iprint)
 except :
     show_error('Hamiltonian')
 else:
@@ -249,7 +255,7 @@ for inn in range(atom1.nmin,atom1.nmax+1):
     elif atom1.vpm_type[inn - atom1.nmin][0] == 'd':
         pg_mb_sp = MBPGsubs(len(manybody_umat),manybody_umat,inn,atom1.iprint,atom1.vpm_type[inn-atom1.nmin])
         pg_mb_sp.dim = len_sp
-        pg_mb_sp.ham = hmat[sta:sta+len_sp,sta:sta+len_sp]
+        pg_mb_sp.ham = hmat_t[sta:sta+len_sp,sta:sta+len_sp]
 
 # diagonal
         timeNsubs.reset()
@@ -260,12 +266,14 @@ for inn in range(atom1.nmin,atom1.nmax+1):
         timeNsubs.ham_trandiag = timeNsubs.count()
         
 #       transform hamiltonian into basis of irreps
-        timeNsubs.reset()
-        show_sub3header('trans basis to natural basis')
-        pg_mb_sp.Focknatural = gw_make_newui(atom1.norb,len_sp,atom1.totncfgs,unitary_len,inn,inn,atom1.amat,basis1,invcd1,invsn1,atom1.iprint,1.0E-8)
-        pg_mb_sp.ham_evc_natural = np.dot(np.transpose(np.conjugate(pg_mb_sp.Focknatural)),pg_mb_sp.ham_evc)
-        pg_mb_sp.ham_natural = tran_op(pg_mb_sp.ham, pg_mb_sp.Focknatural) 
-        timeNsubs.tran2natural = timeNsubs.count()
+##      timeNsubs.reset()
+##      show_sub3header('trans basis to natural basis')
+##      pg_mb_sp.Focknatural = gw_make_newui(atom1.norb,len_sp,atom1.totncfgs,unitary_len,inn,inn,atom1.amat,basis1,invcd1,invsn1,atom1.iprint,1.0E-8)
+##      pg_mb_sp.ham_evc_natural = np.dot(np.transpose(np.conjugate(pg_mb_sp.Focknatural)),pg_mb_sp.ham_evc)
+##      pg_mb_sp.ham_natural = tran_op(pg_mb_sp.ham, pg_mb_sp.Focknatural) 
+        pg_mb_sp.ham_evc_natural = pg_mb_sp.ham_evc
+        pg_mb_sp.ham_natural     = pg_mb_sp.ham 
+##      timeNsubs.tran2natural = timeNsubs.count()
 #
         timeNsubs.reset()
         show_sub3header('make vpms')
