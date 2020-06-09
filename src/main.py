@@ -44,7 +44,7 @@ timedata.reset()
 show_subheader('Cumat')
 try :
     cumat   = atomic_make_cumat(atom1.norb,atom1.int_val['U'],atom1.int_val['Up'],atom1.int_val['Jz'],atom1.int_val['Js'],atom1.int_val['Jp'],atom1.iprint)
-    cumat_t = atomic_tran_cumat(atom1.norb,atom1.amat,cumat)
+    cumat_t = cumat #atomic_tran_cumat(atom1.norb,atom1.amat,cumat)
 except :
     show_error('Cumat')
 else:
