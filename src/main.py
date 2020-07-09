@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 import numpy as np
 import copy
+import sys
 from src.read_input import Atom
 from module.atomic_stream import atomic_make_cumat,atomic_tran_cumat#(norbs, amtrx, cumat, cumat_t)
 from module.mod_dump import dump_4dc, dump_2dc, dump_1dr, dump_1dc, dump_2di
@@ -34,6 +35,7 @@ try:
     atom1.make_instance()
 except:
     show_error('Read Incar')
+    sys.exit(0)
 else:
     show_success()
     print('\n\n')
@@ -48,6 +50,7 @@ try :
         cumat_t = atomic_tran_cumat(atom1.norb,atom1.amat,cumat)
 except :
     show_error('Cumat')
+    sys.exit(0)
 else:
     show_success()
     print('\n\n')
@@ -63,6 +66,7 @@ try :
     basis,invcd,invsn = atomic_make_basis(atom1.norb,atom1.totncfgs,atom1.ncfgs,atom1.norb,atom1.nmin,atom1.nmax,nstat,3)
 except :
     show_error('Basis')
+    sys.exit(0)
 else:
     print('basis:\n',basis) if atom1.iprint >= 2 else 0
     show_success()
@@ -81,6 +85,7 @@ try :
         hmat  =  atomic_make_hmtrx(atom1.norb,atom1.totncfgs,atom1.ncfgs,basis,invcd,invsn,atom1.onsite,cumat,atom1.iprint)
 except :
     show_error('Hamiltonian')
+    sys.exit(0)
 else:
     show_success()
     print('\n\n')
@@ -99,6 +104,7 @@ try :
     dpg.show_attribute() if atom1.iprint >= 2 else 0
 except :
     show_error('PG')
+    sys.exit(0)
 else:
     show_success()
     print('\n\n')
@@ -115,6 +121,7 @@ try :
     Oprt_PG.check_symm_soc(atom1.soc_mat)
 except :
     show_error('TranOrb')
+    sys.exit(0)
 else:
     show_success()
     print('\n\n')
@@ -196,6 +203,8 @@ for inn in range(atom1.nmin,atom1.nmax+1):
         if atom1.iprint == 3 :
             pg_mb_sp.trans_ham(trans=False)
             pg_mb_sp.diag_ham(trans=False) 
+            dump_2dc(len_sp,len_sp,pg_mb_sp.ham,path='ham.dat',prec=1.0e-6)
+            dump_2dc(len_sp,len_sp,pg_mb_sp.ham_irrep,path='ham_irrep.dat',prec=1.0e-6)
             dump_1dr(len_sp,pg_mb_sp.ham_eig,path='eig_n_before_tran_'+str(inn)+'.dat',prec=1.0e-6)
             dump_2dc(len_sp,len_sp,pg_mb_sp.ham_evc,path='evc_n_before_tran_'+str(inn)+'.dat',prec=1.0e-6)
 #       test
@@ -220,7 +229,7 @@ for inn in range(atom1.nmin,atom1.nmax+1):
         pg_mb_sp.cal_degeneracy()
         if atom1.iprint == 3:
             print(10*'* * ')
-            print('|*| the label of final basis of irreps :\n',pg_mb_sp.allbasis['naturalbasis'])
+            print('|*| the label of final basis of irreps :\n',pg_mb_sp.allbasis['matrix'])
             print(10*'* * ')
         show_sub3header('decompose eigenwaves in every degenerate space')
         pg_mb_sp.decompose_degenerate() 

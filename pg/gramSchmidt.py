@@ -33,13 +33,13 @@ def GramSchmidt(vectors):
 
     ###### Handle End Conditions
     if len(vectors) == 0:
-        return []
+        return [[]]
 
     ## Always just take unit vector of first vector for the start of the basis
     u1 = unit_vec(vectors[0])
 
     if len(vectors) == 1:
-        return u1
+        return np.array([u1])
 
     ###### Orthonormalize the rest of the vectors
     #           | easy row stacking

@@ -87,7 +87,7 @@ class ReductRep(Irrep):
         for i in range(self.dim):
             print('basis before norm :\n',vectors_new[i]) if self.iprint ==3 else 0
             vectors_normortho_t = RepBasisNorm(list(vectors_new[i]))
-            print('basis before norm :\n',vectors_normortho_t) if self.iprint ==3 else 0
+            print('basis after norm :\n',vectors_normortho_t) if self.iprint ==3 else 0
             vectors_new_all += list(vectors_normortho_t)
             vectors_normortho.append(vectors_normortho_t)
        
@@ -215,7 +215,7 @@ class ReductRep(Irrep):
             basis_list = []
             basis_list += phi_t1 # phi_t1 is list of numpy.ndarray
             if self.dim > 1 :
-                phi_other = self.make_phi_other(phi_t1[0],imul)
+                phi_other = self.make_phi_other1(phi_t1[0],imul)
                 basis_list += phi_other
 #           if self.iprint == 2 :
             if self.iprint >= 2 :
@@ -264,8 +264,14 @@ class ReductRep(Irrep):
             func_1  = np.einsum('ji,i->j',Proj,func_all)
             # to make sure phi2 = P10 phi1 has nonzero element
             if self.dim > 1 :
-                phi2 = self.make_phi_other(func_1,multi_now)
-                if np.sum(np.abs(phi2)) > 1e-2 :
+                phi2 = self.make_phi_other1(func_1,multi_now)
+#               if np.sum(np.abs(phi2)) > 1e-2 :
+                max_flag = 100.0
+                for i in range(len(phi2)):
+                    max_current = np.abs(np.array(phi2[i])).max()
+                    if max_current < max_flag:
+                        max_flag = copy.deepcopy(max_current) 
+                if max_flag > 1e-2 :
                     phi2_flag = True
                 else:
                     phi2_flag = False
@@ -273,7 +279,6 @@ class ReductRep(Irrep):
                 phi2_flag = True 
             if np.sum(np.abs(func_1)) > 1.0e-4 and phi2_flag:
                 func_1  = RepBasisNorm(func_1) 
-#               isindependt_all = []
                 basis_set = []
                 if self.iprint == 3:
                     print(5*'- ','\n','   check independence ...')
@@ -301,33 +306,6 @@ class ReductRep(Irrep):
                         label_list.append(float(0.0))
                     else :
                         label_list.append(np.sum(np.abs(np.array(label_t))))
-#               if int(multi_now) > 0 or len(irrep_prev) > 0 :
-#                   print('multi_now(from 0) =',multi_now,'/',self.multi,'  ','num of irrep_prev :',len(irrep_prev))
-#                   print(5*'- ')
-#                   if int(multi_now) > 0 :
-#                       print('')
-#                       basis_set = []
-#                       for imul in range(multi_now):
-#                           print('   independent:  multi(from 0)=',imul,'multi(now)=',multi_now)
-#                           mul_name  = 'multi' + str(imul)
-#                           basis_set += self.basis[mul_name]
-#                       label_t, independt   = isindependent(func_1,basis_set) 
-#                       isindependt_all += independt
-#                       label_list_tmp += label_t
-#                   if len(irrep_prev) > 0 :
-#                       for irr in irrep_prev :
-#                           if irr.multi > 0:
-#                               for imul in range(irr.multi):
-#                                   print('   independent:  multi(from 0)=',imul,'/',irr.multi)
-#                                   mul_name = 'multi' + str(imul)
-#                                   basis_set = irr.basis[mul_name]
-#                                   label_t, independt   = isindependent(func_1,basis_set) 
-#                                   isindependt_all += independt
-#                                   label_list_tmp += label_t
-#                   label_list.append(min(np.sum(np.abs(np.array(label_list_tmp))),))
-#               else:
-#                   print(5*'  ','NO NEED : because imul=',multi_now,'len(irrep_prev)=',len(irrep_prev))
-#                   label_list.append(np.sum(np.abs(func_1)))
             else:
                 isindependt_all += [False]
                 label_list.append(float(0.0))
@@ -383,6 +361,30 @@ class ReductRep(Irrep):
             basis_other.append(basis_t)
         return basis_other
 
+    def make_phi_other1(self,phi_1,multi_now):
+        '''
+        version : advanced version for dimension of irreps > 2
+        aim : once there is phi_1, produce the other basis using projectors W^i_10, W^i_21, ... when the dimension
+              of the irrepresentation is larger than 1
+        input : 
+                phi_1 : 1D-numpy.ndarray
+                multi_now : Integer <counts from 0>
+        output
+                phi_other : list of     
+        '''
+        basis_other = []
+        basis_other.append(phi_1)
+        for i in range(self.dim-1):
+            name_proj = 'P' + str(i+1) + str(i)
+#           name_proj = 'P' + str(i) + str(i+1)
+            proj      = self.projector[name_proj]
+#           basis_t   = np.dot(proj,phi_1)
+            basis_t   = np.einsum('ji,i->j',proj,basis_other[len(basis_other)-1])
+            if self.iprint >= 2 :
+                print('* WAVE(phi'+str(i+2)+') Done :  of multi<',multi_now,'> of <',self.label,'> is :',np.linalg.norm(basis_t))
+            basis_other.append(basis_t)
+        basis_other.pop(0) # delete the first one which is phi_1
+        return basis_other
         
 
     def make_projector(self,op):
@@ -1148,7 +1150,7 @@ class MBPGsubs(MBPG):
             label_t = None
             logic_t = True
             for i in range(len_sp):
-                if np.abs(self.ham_evc[i,j]) > 1.0E-6:
+                if np.abs(self.ham_evc[i,j]) > 1.0E-10:
                     cnt_t += 1
                     if label_t == None:
                         label_t = self.allbasis['irreplabel'][i][0]

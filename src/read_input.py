@@ -237,8 +237,8 @@ class Atom():
         if self.soc_type == None :
             self.soc_val = None
             print("soc will be absent in atomic hamiltonian, but may still exist in gqn!")
-        elif self.soc_type not in ['s','p','d','f']:
-            raise IOError("<soc_type> is not recognize and should be one of <s, p, d, f> !")
+        elif self.soc_type not in ['s','t2g','d','f']:
+            raise IOError("<soc_type> is not recognize and should be one of <s, t2g, d, f> !")
         elif self.soc_val == None :
             self.soc_val = np.float64(0.0)
             print("<soc_val> is None and has beed set to <0.0>")
