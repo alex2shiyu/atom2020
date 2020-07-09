@@ -11,6 +11,7 @@ import copy
 from pg.gramSchmidt import GramSchmidt
 from module.mod_dump import dump_4dc, dump_2dc, dump_1dr, dump_1dc
 from src.atomic_subs import show_sub4header
+import itertools
 
 class Irrep:
     '''
@@ -892,7 +893,7 @@ class MBPGsubs(MBPG):
                     name = 'multi' + str(imul)
                     for idim in range(irr.dim):
                         self.allbasis['matrix'].append(irr.basis[name][idim])
-                        self.allbasis['irreplabel'].append([irr.label,irr.dim,idim])
+                        self.allbasis['irreplabel'].append([irr.label,irr.dim,idim,irr.multi])
 
     def Cal_ReductRep(self,irrep_input):
         '''
@@ -986,14 +987,16 @@ class MBPGsubs(MBPG):
             raise ValueError("ERROR in PG.MBPGsubs.cal_degeneracy")
         for i in range(self.deg):
             deg_irreplabel = None
+            self.deginfo[i]['irrep'] = [] 
             for j in range(self.deginfo[i]['start'],self.deginfo[i]['start']+self.deginfo[i]['degeneracy']):
                 for jj in range(self.dim):
                     if np.abs(self.ham_evc[jj,j]) > 1.0e-3 : 
                         deg_irreplabel = self.allbasis['irreplabel'][jj][0]
-                        self.deginfo[i]['irrep'] = copy.deepcopy(deg_irreplabel)
-                        break
-                if deg_irreplabel != None :
-                    break
+                        if deg_irreplabel not in self.deginfo[i]['irrep']:
+                            self.deginfo[i]['irrep'].append(copy.deepcopy(deg_irreplabel))
+            print('self.deginfo[i][irrep] for i=',i,' is \n',self.deginfo[i]['irrep'])
+#               if deg_irreplabel != None :
+#                   break
         if self.iprint == 3 :
             print('Degeneracy:  \n',self.deg)
             print('Degeneracy(info):  \n',self.deginfo)
@@ -1043,12 +1046,13 @@ class MBPGsubs(MBPG):
             basis_list = []
             cnt_dict = int(-1)
             label_dict = {}
+            # collect basis
             for j in range(self.deginfo[i]['start'],self.deginfo[i]['start']+self.deginfo[i]['degeneracy']):
                 cnt_dict += 1
                 basis_list.append(self.ham_evc[:,j])
                 label_dict[str(cnt_dict)] = j
-
             work_array  = np.transpose(np.array(basis_list))
+
             if self.iprint == 3:
                 print('work array :',work_array)
                 print('Deg(from 0)             : ', i)
@@ -1065,7 +1069,7 @@ class MBPGsubs(MBPG):
                 logic_t = True
                 cnt_t   = 0
                 for ii in range(len_sp):
-                    if np.abs(basis_list[jj][ii]) > 1.0E-5:
+                    if np.abs(basis_list[jj][ii]) > 1.0E-7:
                         cnt_t += 1
                         if label_t == None:
                             label_t = self.allbasis['irreplabel'][ii]
@@ -1079,55 +1083,77 @@ class MBPGsubs(MBPG):
             # check whether its nonzero elements only lies in a single irreps space
             # if yes : pass
             # if no  : error
-            irrep_t     = self.irrep[self.irrepindex[self.deginfo[i]['irrep']]] 
+            # now the irrep_t may contain many irreps
+            irrep_t = [self.irrep[self.irrepindex[self.deginfo[i]['irrep'][irrr]]] for irrr in range(len(self.deginfo[i]['irrep']))]
+
             if self.iprint == 3:
                 print(' irrep now :',irrep_t)
-            if irrep_t.dim > 1:
-                if not all(logic_list) :
-                    ibase = int(0)
-                    for kk in range(self.irrepindex[self.deginfo[i]['irrep']]):
+            if not all(logic_list) :
+                multi_list = []
+                for iir in range(len(irrep_t)):
+                    multi_list.append(irrep_t[iir].multi)
+                # make combination
+                permu_list = []
+                permu_t = []
+                for ilen in range(len(multi_list)):
+                    permu_t1 = [imm for imm in range(multi_list[ilen])]
+                    permu_t.append(permu_t1)
+                permu_t2 = itertools.product(*permu_t)
+                for iele in permu_t2:
+                    permu_list.append(list(iele))
+                # base 
+                ibase = np.zeros(len(irrep_t),dtype=np.int32)
+                for iirr in range(len(irrep_t)):
+                    for kk in range(self.irrepindex[irrep_t[iirr].label]):
                         if self.irrep[kk].multi > 0:
-                            ibase += self.irrep[kk].multi * self.irrep[kk].dim
+                            ibase[iirr] += self.irrep[kk].multi * self.irrep[kk].dim
                     if self.iprint == 3:
-                        print('ibase for ',irrep_t.label, 'is : ',ibase)
+                        print('ibase for ',irrep_t[iirr].label, 'is : ',ibase[iirr])
+
+                # make the dimension for work space
+                len_eff_basis = 0
+                for iirr in range(len(irrep_t)):
+                    len_eff_basis += irrep_t[iirr].dim
+                print('len(irrep_t)=',len(irrep_t))
+                print('self.deg=',self.deg,' i=',i)
+                print('len_eff_basis=',len_eff_basis)
+
+                for ilist in permu_list :
+                    # initial
                     find_label = False
-                    for k in range(irrep_t.multi):
-                        basis_array = np.zeros((irrep_t.dim,irrep_t.dim),dtype=np.complex128)
-                        for icol in range(irrep_t.dim):
-                            for ideg in range(irrep_t.dim):
-                                basis_array[icol,ideg] = work_array[ibase+icol,ideg]
-                        # judge whether the basis_array is reversible?
-                        if self.iprint == 3:
-                            print('>>> matrix start to make decomposition :\n',basis_array)
-                        if np.abs(np.linalg.det(basis_array)) > 1e-3 :
-                            find_label = True
-                            print(">>> index for multi of basis decomposition(from 0) :",k) if self.iprint == 3 else 0
-                            break
-                        elif k == irrep_t.multi -1 :
-                            print(">>> decomposition(from 0) : Failed in multi=",k,'/',irrep_t.multi,'determinant =',np.linalg.det(basis_array))
-                            print(">>> index for multi of basis decomposition(from 0) : Failed")
-                            raise ValueError(">>> Can not find proper matrix to decompose")
-                        else:
-                            if self.iprint >= 2:
-                                print(">>> decomposition(from 0) : Failed in multi=",k,'/',irrep_t.multi,'determinant =',np.linalg.det(basis_array))
-                        ibase += int(irrep_t.dim * (k+1))
-                    if find_label :
-                        if self.iprint ==3 :
-                            print('>>> decomposition matrix original :\n',basis_array)
-                            print('>>> decomposition matrix :\n',np.linalg.inv(basis_array))
-                        work_array_new = np.dot(work_array,np.linalg.inv(basis_array))
+
+#                   for k in range(irrep_t[iirr].multi):
+                   
+                    basis_array = np.zeros((len_eff_basis,len_eff_basis),dtype=np.complex128)
+                    base_t = 0
+                    for icol in range(len(irrep_t)):
+                        basis_array[base_t:base_t+irrep_t[icol].dim,:] = \
+                                work_array[(ibase[icol]+ilist[icol]*irrep_t[icol].dim):(ibase[icol]+(ilist[icol]+1)*irrep_t[icol].dim),:]
+                        base_t += irrep_t[icol].dim
+                    # judge whether the basis_array is reversible?
+                    if self.iprint == 3:
+                        print('>>> matrix start to make decomposition :\n',basis_array)
+                    if np.abs(np.linalg.det(basis_array)) > 1e-3 :
+                        find_label = True
+                        print(">>> index for multi of basis decomposition(from 0) : ",ilist) if self.iprint == 3 else 0
+                        break
+                    elif ilist == permu_list[-1] :
+                        print(">>> decomposition(from 0) : Failed in multi=",ilist,'determinant =',np.linalg.det(basis_array))
+                        print(">>> index for multi of basis decomposition(from 0) : Failed")
+                        raise ValueError(">>> Can not find proper matrix to decompose")
+                    else:
+                        if self.iprint >= 2:
+                            print(">>> decomposition(from 0) : Failed in multi=",'determinant =',np.linalg.det(basis_array))
+                if find_label :
+                    if self.iprint ==3 :
+                        print('>>> decomposition matrix original :\n',basis_array)
+                        print('>>> decomposition matrix :\n',np.linalg.inv(basis_array))
+                    work_array_new = np.dot(work_array,np.linalg.inv(basis_array))
                     self.ham_evc_decompose[:,self.deginfo[i]['start']:self.deginfo[i]['start']+self.deginfo[i]['degeneracy']] =\
                             copy.deepcopy(work_array_new[:,:])
-                else :
-                    if self.iprint >= 2:
-                        print(">>> basis decomposition(from 0) : no Need(True for not mixing between different columns)")
-                        print(">>>   order of degeneracy space :", i)
-                    self.ham_evc_decompose[:,self.deginfo[i]['start']:self.deginfo[i]['start']+self.deginfo[i]['degeneracy']] =\
-                            copy.deepcopy(work_array[:,:])
-
-            elif irrep_t.dim == 1:
+            else:
                 if self.iprint >= 2 :
-                    print(">>> basis decomposition(from 0) : no Need(1D irrep)")
+                    print(">>> basis decomposition(from 0) : no Need")
                 self.ham_evc_decompose[:,self.deginfo[i]['start']:self.deginfo[i]['start']+self.deginfo[i]['degeneracy']] =\
                         copy.deepcopy(work_array[:,:])
         if self.ham_evc.shape == self.ham_evc_decompose.shape :
@@ -1145,25 +1171,40 @@ class MBPGsubs(MBPG):
         '''
         len_sp = self.ham_evc.shape[0]
         logic_list = []
+        label_list = []
+        number_list= []
         for j in range(len_sp):
             cnt_t   = 0
-            label_t = None
+            label_t = []
             logic_t = True
+            num_t   = 0
             for i in range(len_sp):
                 if np.abs(self.ham_evc[i,j]) > 1.0E-10:
                     cnt_t += 1
-                    if label_t == None:
-                        label_t = self.allbasis['irreplabel'][i][0]
+                    if label_t == []:
+                        label_t.append(self.allbasis['irreplabel'][i][0])
+                        num_t = 1
                     else:
-                        if label_t != self.allbasis['irreplabel'][i][0]:
+                        if self.allbasis['irreplabel'][i][0] not in label_t :
+                            label_t.append(self.allbasis['irreplabel'][i][0])
+                            num_t += 1
                             logic_t = False
             logic_list.append(logic_t)
+            label_list.append(label_t)
+            number_list.append(num_t)
             if self.iprint >= 2 :
-                print(5*' ','j =',j,'deg=',cnt_t,'logic:',logic_t,'label = ',label_t)
-        if all(logic_list) == True or logic_list == []:
+                print('number of nonzeros elements of ',j,'th column is : ',cnt_t)
+                print('irrep label in ',j,'th column is \n',label_t)
+                print('logical label in ',j,'th column is \n',logic_t)
+                print('number of different irreps in ',j,'th column is \n',num_t)
+        if max(number_list) == 1 or logic_list == []:
             print('\n',4*' '+'---> PASS')
         else:
-            raise ValueError("ERROR in PG.MBPGsubs.check_basis_irreps1")
+            print('irrep label in is \n',label_list)
+            print('logical label is \n',logic_list)
+            print('number of different irreps is \n',number_list)
+            print('\n',4*' '+' need to decompose ...')
+#           raise ValueError("ERROR in PG.MBPGsubs.check_basis_irreps1")
 
 
     # check the structure of irreps of basis
@@ -1183,7 +1224,7 @@ class MBPGsubs(MBPG):
             label_t = None
             logic_t = True
             for i in range(len_sp):
-                if np.abs(self.ham_evc[i,j]) > 1.0E-5:
+                if np.abs(self.ham_evc[i,j]) > 1.0E-10:
                     cnt_t += 1
                     if label_t == None:
                         label_t = self.allbasis['irreplabel'][i]
