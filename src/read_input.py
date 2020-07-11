@@ -69,7 +69,8 @@ class Atom():
             gqn       3 
             point_group C4v
             space_group 71
-            vpm_type    'general' 'general' 'diagonal'
+            vpm_type    'general' 'general' 'diagonal' # N=0 and N=num_orb should be set 'diagonal' as well as 
+                        'total' (means 'diagonal',...,'diagonal')
             vpm_symm    1
             -----
             #gqn:
@@ -131,6 +132,18 @@ class Atom():
                         vpm_symm = np.int32(line1.split()[1])
                     elif line1[0:8] == "vpm_type" :
                         vpm_type = line1.split()[1:]
+                        if len(vpm_type) ==1 and vpm_type[0] == 'default' :
+                            vpm_type = []
+                            if nmin == 0 :
+                                vpm_type.append('diagonal')
+                            else:
+                                vpm_type.append('general')
+                            for itmp in range(nmin + 1,nmax):
+                                vpm_type.append('general')
+                            if nmax ==  norb:
+                                vpm_type.append('diagonal')
+                            else:
+                                vpm_type.append('general')
                     elif line1[0:6] == "iprint" :
                         iprint = np.int32(line1.split()[1])
                     elif line1 == '':

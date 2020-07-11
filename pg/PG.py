@@ -623,6 +623,37 @@ class MBPG():
         for nsubs in self.Nsubs :
             print('{:>2}{:<20}{:>31}{:>23}{:>2}'.format('|','  N='+str(nsubs.nocc),' ',' ','|')) 
             if nsubs.vpmtype[0] == 'g' :
+                list_t = [nsubs.deginfo[ii]['degeneracy'] for ii in range(nsubs.deg)]
+                list_tt= [nsubs.irrep_accidental_deg[ii] for ii in range(nsubs.deg)]
+                dim_t = len(list_t)
+                remainder_t = dim_t % 10
+                if remainder_t == 0:
+                    times_t = int(dim_t/10)
+                else :
+                    times_t = int(dim_t /10) + 1
+                if remainder_t > 0:
+                    for i in range(10 - remainder_t):
+                        list_t.append(' ')
+                        list_tt.append(' ')
+                ibase = int(0)
+                for iline in range(times_t):
+                    if iline == 0 :
+                        print('{:>2}{}{:<13}{:<4}'.format('|',6*' ','Deg',':'),end=' ')
+                    else :
+                        print(' |'+18*' ',end=' ')
+                    for icnt in range(10):
+                        print('{0:<{width}}'.format(list_t[icnt + ibase], width=4), end=' ')
+                    print('{:>2}'.format('|'))
+#
+                    if iline == 0 :
+                        print('{:>2}{}{:<13}{:<4}'.format('|',6*' ','Accidental?',':'),end=' ')
+                    else :
+                        print(' |'+18*' ',end=' ')
+                    for icnt in range(10):
+                        print('{0:<{width}}'.format(list_tt[icnt + ibase], width=4), end=' ')
+                    print('{:>2}'.format('|'))
+                    ibase = (iline+1)*10
+                print('{:>2}{}{:<14}{:>31}{:>23}{:>2}'.format('|',6*' ',14*'-',' ',' ','|')) 
                 for keys in nsubs.ham_evc_irrepindex['group'] :
 #                   print('{:>2}{}{:<8}{:<5}{:>36}{:>23}{:>2}'.format('|',6*' ',keys,':',nsubs.ham_evc_irrepindex['group'][keys],'|')) 
 #                   print('{:>2}{}{:<8}{:<4}'.format('|',6*' ',keys,':'),\
@@ -650,6 +681,7 @@ class MBPG():
 #                   print('{:>3}{:>3}{:>3}{:>3}{:>3}{:>3}{:>3}{:>3}{:>3}'.format(*(nsubs.ham_evc_irrepindex['group'][keys][0:10])),'{:>2}'.format('|')) 
             elif nsubs.vpmtype[0] == 'd' :
                 print('{:>2}{}{:<14}{:>54}{:>2}'.format('|',6*' ','diagonal vpms',' ','|')) 
+            print('{:>2}{}{:<68}{:>2}'.format('|',6*' ',68*'-','|')) 
         print(' *'+75*'='+'*')
 
 
@@ -746,12 +778,13 @@ class MBPGsubs(MBPG):
         self.ham_irrep = np.zeros(op[0].shape,dtype=np.complex128) if len(op) > 0 else None
         self.ham_evc_natural = None # which has been transfromed into natural basis
         self.ham_evc_irrepindex = {}
-        self.deg     = 100
-        self.deginfo = []
         self.irrepindex = {}
         self.ham_evc_decompose = []
         self.Focknatural = None
         self.vpmtype = vpmtype  # str
+        self.deg     = 100
+        self.deginfo = []
+        self.irrep_accidental_deg = [] # record whether there is accidential degeneracy in every degenerate space
  
     def group_irrep_evc(self):
         '''
@@ -994,12 +1027,36 @@ class MBPGsubs(MBPG):
                         deg_irreplabel = self.allbasis['irreplabel'][jj][0]
                         if deg_irreplabel not in self.deginfo[i]['irrep']:
                             self.deginfo[i]['irrep'].append(copy.deepcopy(deg_irreplabel))
-            print('self.deginfo[i][irrep] for i=',i,' is \n',self.deginfo[i]['irrep'])
-#               if deg_irreplabel != None :
-#                   break
+            print('self.deginfo[i][irrep] for i=',i,' is \n',self.deginfo[i]['irrep']) if self.iprint >=2 else 0
+        # print the irreps adn accidential degeneracy of every degenerate space 
+        # and judge whether there are accidential degeneracy of one irreps
+        print('\n')
+        print('Irreps of degenerate space and information of accidential degeneracy:\n')
+        print('{:15}{:10}{:10}{:20}'.format('Deg Space','Deg','Taste','Irreps'))
+        for i in range(self.deg):
+            deg_from_irreps = 0
+            taste1   = False # record whether there is accidential degeneracy, True is yes False means One degenerate
+                             # space just contains only one irrep 
+            taste    = True  # record whether there is accidential degeneracte space which contain a certain degenerate 
+                             # space more than once which we currently can not handle 
+            break_dump = False
+            if len(self.deginfo[i]['irrep']) > 1 :
+                taste1 = True
+            for ii in range(len(self.deginfo[i]['irrep'])):
+                deg_from_irreps += self.irrep[self.irrepindex[self.deginfo[i]['irrep'][ii]]].dim
+            if deg_from_irreps != self.deginfo[i]['degeneracy']:
+                break_dump = True
+                taste      = False
+            line_t = '{:<15}{:<10}{}{}{}'.format(i+1,self.deginfo[i]['degeneracy'],taste,'   ',\
+                    self.deginfo[i]['irrep'])
+            print(line_t)
+            self.irrep_accidental_deg.append(copy.deepcopy(taste1))
+        print('\n')
         if self.iprint == 3 :
             print('Degeneracy:  \n',self.deg)
             print('Degeneracy(info):  \n',self.deginfo)
+        if break_dump :
+            raise ValueError('SymmAtom can not handle a accidential degenerate space due to contain a same Irreps more than once')
        
     def check_irrepbasis_final(self):
         '''
@@ -1092,7 +1149,7 @@ class MBPGsubs(MBPG):
                 multi_list = []
                 for iir in range(len(irrep_t)):
                     multi_list.append(irrep_t[iir].multi)
-                # make combination
+                # make permutation and combination
                 permu_list = []
                 permu_t = []
                 for ilen in range(len(multi_list)):
@@ -1101,6 +1158,7 @@ class MBPGsubs(MBPG):
                 permu_t2 = itertools.product(*permu_t)
                 for iele in permu_t2:
                     permu_list.append(list(iele))
+
                 # base 
                 ibase = np.zeros(len(irrep_t),dtype=np.int32)
                 for iirr in range(len(irrep_t)):
@@ -1114,9 +1172,6 @@ class MBPGsubs(MBPG):
                 len_eff_basis = 0
                 for iirr in range(len(irrep_t)):
                     len_eff_basis += irrep_t[iirr].dim
-                print('len(irrep_t)=',len(irrep_t))
-                print('self.deg=',self.deg,' i=',i)
-                print('len_eff_basis=',len_eff_basis)
 
                 for ilist in permu_list :
                     # initial

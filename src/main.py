@@ -61,7 +61,7 @@ timedata.reset()
 show_subheader('Basis')
 try :
     nstat = atomic_state(atom1.norb)
-    print('nstat=\n',nstat) if atom1.iprint >= 2 else 0
+    print('\nnstat = ',nstat)
     # here 3 means atom.basis.in will be output
     basis,invcd,invsn = atomic_make_basis(atom1.norb,atom1.totncfgs,atom1.ncfgs,atom1.norb,atom1.nmin,atom1.nmax,nstat,3)
 except :
