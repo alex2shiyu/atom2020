@@ -306,4 +306,5 @@ class Atom():
         print('{:>2}{}{:<20}{:>20}{:>32}{:>2}'.format('|',2*' ','vpm_type :',' ',' ','|')) 
         for i in range(self.nmin,self.nmax + 1):
             print('{:>2}{}{:<16}{:>20}{:>32}{:>2}'.format('|',6*' ','N ='+str(i),':',self.vpm_type[i-self.nmin],'|')) 
+        print('{:>2}{}{:<20}{:>20}{:>32}{:>2}'.format('|',2*' ','print verbosity',':',self.iprint,'|')) 
         print(' *'+75*'='+'*')
