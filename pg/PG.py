@@ -640,7 +640,7 @@ class MBPG():
                     if iline == 0 :
                         print('{:>2}{}{:<13}{:<4}'.format('|',6*' ','Deg',':'),end=' ')
                     else :
-                        print(' |'+18*' ',end=' ')
+                        print(' |'+23*' ',end=' ')
                     for icnt in range(10):
                         print('{0:<{width}}'.format(list_t[icnt + ibase], width=4), end=' ')
                     print('{:>2}'.format('|'))
@@ -648,7 +648,7 @@ class MBPG():
                     if iline == 0 :
                         print('{:>2}{}{:<13}{:<4}'.format('|',6*' ','Accidental?',':'),end=' ')
                     else :
-                        print(' |'+18*' ',end=' ')
+                        print(' |'+23*' ',end=' ')
                     for icnt in range(10):
                         print('{0:<{width}}'.format(list_tt[icnt + ibase], width=4), end=' ')
                     print('{:>2}'.format('|'))
