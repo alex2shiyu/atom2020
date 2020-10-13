@@ -1,2 +1,4 @@
 ./test/*
 ./module/*
+./pg/__pycache__
+./src/__pycache__

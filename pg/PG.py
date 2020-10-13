@@ -1126,7 +1126,7 @@ class MBPGsubs(MBPG):
                 logic_t = True
                 cnt_t   = 0
                 for ii in range(len_sp):
-                    if np.abs(basis_list[jj][ii]) > 1.0E-7:
+                    if np.abs(basis_list[jj][ii]) > 1.0E-5:
                         cnt_t += 1
                         if label_t == None:
                             label_t = self.allbasis['irreplabel'][ii]
@@ -1279,7 +1279,7 @@ class MBPGsubs(MBPG):
             label_t = None
             logic_t = True
             for i in range(len_sp):
-                if np.abs(self.ham_evc[i,j]) > 1.0E-10:
+                if np.abs(self.ham_evc[i,j]) > 1.0E-5:
                     cnt_t += 1
                     if label_t == None:
                         label_t = self.allbasis['irreplabel'][i]
