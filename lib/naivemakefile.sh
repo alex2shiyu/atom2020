@@ -1,5 +1,12 @@
 #!/bin/bash
 
+dst_dir=module
+cd ..
+if [ -d $dst_dir ];then
+    rm -rf $dst_dir
+fi
+mkdir $dst_dir
+cd $dst_dir
 for i in `ls ../lib`;
 do
     destfile="`basename \"$i\" .f90`"
