@@ -117,8 +117,12 @@ try :
     npoly1, dim1, npower1, nfunc1 = get_TranOrb_param(atom1.soc_type)
     Oprt_PG = TranOrb(dpg.rep_vec,dpg.rep_spin,npoly1,dim=dim1,npower=npower1,nfunc=nfunc1,shell=atom1.soc_type,iprint=atom1.iprint)
     Oprt_PG.show_attribute() if atom1.iprint == 3 else 0
-    Oprt_PG.check_symm_crystal(atom1.cfd_mat)
-    Oprt_PG.check_symm_soc(atom1.soc_mat)
+    if 'general' in atom1.vpm_type: 
+        Oprt_PG.check_symm_crystal(atom1.cfd_mat)
+        Oprt_PG.check_symm_soc(atom1.soc_mat)
+        print('cfd_mat and soc_mat has been checked the Point Group symmetry')
+    else:
+        print('cfd_mat and soc_mat has not been checked the Point Group symmetry')
 except :
     show_error('TranOrb')
     sys.exit(0)
