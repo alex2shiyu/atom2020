@@ -46,7 +46,7 @@ timedata.reset()
 show_subheader('Cumat')
 try :
     cumat   = atomic_make_cumat(atom1.norb,atom1.int_val['U'],atom1.int_val['Up'],atom1.int_val['Jz'],atom1.int_val['Js'],atom1.int_val['Jp'],atom1.iprint)
-    if 'diagonal' in atom1.vpm_type : 
+    if 'diagonal' in atom1.vpm_type or  'all' in atom1.vpm_type : 
         cumat_t = atomic_tran_cumat(atom1.norb,atom1.amat,cumat)
 except :
     show_error('Cumat')
@@ -77,7 +77,7 @@ timedata.basis = timedata.count()
 timedata.reset()
 show_subheader('Hamiltonian')
 try :
-    if 'diagonal' in atom1.vpm_type :
+    if 'diagonal' in atom1.vpm_type or  'all' in atom1.vpm_type :
         onsite_t = tran_op(atom1.onsite, atom1.amat)
         hmat  =  atomic_make_hmtrx(atom1.norb,atom1.totncfgs,atom1.ncfgs,basis,invcd,invsn,atom1.onsite,cumat,atom1.iprint)
         hmat_t=  atomic_make_hmtrx(atom1.norb,atom1.totncfgs,atom1.ncfgs,basis,invcd,invsn,onsite_t,cumat_t,atom1.iprint)
@@ -261,7 +261,7 @@ for inn in range(atom1.nmin,atom1.nmax+1):
             print(5*' ','characters:\n',irr.characters.real)
             print(5*' ','multi for ',irr.label,'is ',irr.multi)
             print('\n')
-    elif atom1.vpm_type[inn - atom1.nmin][0] == 'd':
+    elif atom1.vpm_type[inn - atom1.nmin][0] == 'd' or atom1.vpm_type[inn - atom1.nmin][0] == 'a' :
         pg_mb_sp = MBPGsubs(len(manybody_umat),manybody_umat,inn,atom1.iprint,atom1.vpm_type[inn-atom1.nmin])
         pg_mb_sp.dim = len_sp
         pg_mb_sp.ham = hmat_t[sta:sta+len_sp,sta:sta+len_sp]

@@ -613,6 +613,11 @@ class MBPG():
                 print('{:>2}{}{:<14}{:>31}{:>23}{:>2}'.format('|',6*' ','NumVpms',':',nsubs.vpmnum,'|')) 
                 print('{:>2}{}{:<14}{:>31}{:>23}{:>2}'.format('|',6*' ','-------',' ',' ','|')) 
                 print('{:>2}{}{:<14}{:>54}{:>2}'.format('|',6*' ','diagonal vpms',' ','|')) 
+            elif nsubs.vpmtype[0] == 'a' :
+                print('{:>2}{}{:<14}{:>31}{:>23}{:>2}'.format('|',6*' ','NumCfgs',':',nsubs.dim,'|')) 
+                print('{:>2}{}{:<14}{:>31}{:>23}{:>2}'.format('|',6*' ','NumVpms',':',nsubs.vpmnum,'|')) 
+                print('{:>2}{}{:<14}{:>31}{:>23}{:>2}'.format('|',6*' ','-------',' ',' ','|')) 
+                print('{:>2}{}{:<14}{:>54}{:>2}'.format('|',6*' ','all vpms     ',' ','|')) 
 #           if nsubs != self.Nsubs[len(self.Nsubs)-1]:
         # print number of total configurations and vpms
 
@@ -681,6 +686,8 @@ class MBPG():
 #                   print('{:>3}{:>3}{:>3}{:>3}{:>3}{:>3}{:>3}{:>3}{:>3}'.format(*(nsubs.ham_evc_irrepindex['group'][keys][0:10])),'{:>2}'.format('|')) 
             elif nsubs.vpmtype[0] == 'd' :
                 print('{:>2}{}{:<14}{:>54}{:>2}'.format('|',6*' ','diagonal vpms',' ','|')) 
+            elif nsubs.vpmtype[0] == 'a' :
+                print('{:>2}{}{:<14}{:>54}{:>2}'.format('|',6*' ','all vpms     ',' ','|')) 
             print('{:>2}{}{:<68}{:>2}'.format('|',6*' ',68*'-','|')) 
         print(' *'+75*'='+'*')
 
@@ -815,6 +822,12 @@ class MBPGsubs(MBPG):
             for idim in range(self.dim):
                 num_vpm += 1
                 self.vpmsy[idim,idim] = num_vpm
+        elif self.vpmtype[0] == 'a' :
+            num_vpm = int(0)
+            for idim1 in range(self.dim):
+                for idim2 in range(self.dim):
+                    num_vpm += 1
+                    self.vpmsy[idim1,idim2] = num_vpm
         self.vpmnum = num_vpm
 
 
