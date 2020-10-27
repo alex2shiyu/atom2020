@@ -169,13 +169,20 @@ class Atom():
         else : 
             amat = np.identity(norb,dtype=np.complex128) 
 
-        if cfd == 'yes' :
+        if cfd == 'nospin' or cfd == 'yes' :
             try : 
                 cfd_mat_t = read_2dc(int(norb/2),int(norb/2),cemat_file)
                 spin_t = np.identity(2,dtype=np.complex128)
                 cfd_mat = np.kron(cfd_mat_t,spin_t)
 #               cfd_mat = tran_op(cfd_mat,amat)
                 return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat,gqn,point_group,space_group,basis_tran,amat,vpm_symm,vpm_type,iprint)
+            except IOError:
+                print("File:" + "\"" +cemat_file+ "\"" + " doesn't exist!")
+        elif cfd == 'spin':
+            try : 
+                cfd_mat_t = read_2dc(norb,norb,cemat_file)
+#               cfd_mat = tran_op(cfd_mat,amat)
+                return Atom(norb,nmin,nmax,int_type,int_val,soc_type,soc_val,cfd,cfd_mat_t,gqn,point_group,space_group,basis_tran,amat,vpm_symm,vpm_type,iprint)
             except IOError:
                 print("File:" + "\"" +cemat_file+ "\"" + " doesn't exist!")
         else : 
@@ -266,8 +273,10 @@ class Atom():
             raise IOError("if you set gqn to <4> or <5>, the <point_group> should be given")
         elif self.gqn == 2 or self.gqn ==3 and self.point_group != None :
             print("if you set gqn to <2> or <3>, the <point_group> should not be given")
-        if self.cfd == 'yes' :
-            print('<cfd> will be read from atom2020.cemat.in')
+        if self.cfd == 'yes' or 'nospin' :
+            print('<cfd> will be read from atom2020.cemat.in(nospin)')
+        elif self.cfd == 'spin' :
+            print('<cfd> will be read from atom2020.cemat.in(spin)')
         elif self.cfd == 'no' :
             self.cfd = None
             print("cfd will be absent in atomic hamiltonian, but may still exist in gqn!")
