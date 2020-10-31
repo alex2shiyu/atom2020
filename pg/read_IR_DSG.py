@@ -373,8 +373,8 @@ def get_rotation(R):
 
 def loadIR(gid, fname=None, test=False, shift=[0, 0, 0], coord='c'):
     if not fname:
-#       fname = Library + '/IR_DSG.dat'
-        fname = '/share/home/pengsy/work/atom2020/pg' + '/IR_DSG.dat'
+        fname = Library + '/IR_DSG.dat'
+#       fname = '/share/home/pengsy/work/atom2020/pg' + '/IR_DSG.dat'
 
    #if dfttype=='abinit':
    #    from . import readabinit

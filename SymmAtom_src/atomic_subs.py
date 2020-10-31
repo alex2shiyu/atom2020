@@ -1,5 +1,5 @@
 import numpy as np
-from src.atomic_constants import * 
+from atomic_constants import * 
 from scipy.special import comb, perm
 from timeit import default_timer as timer
 from datetime import timedelta, datetime

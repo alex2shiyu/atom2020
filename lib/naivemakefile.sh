@@ -1,6 +1,6 @@
 #!/bin/bash
 
-dst_dir=module
+dst_dir=SymmAtom_mod
 pyfile=../lib/__init__.py
 cd ..
 if [ -d $dst_dir ];then

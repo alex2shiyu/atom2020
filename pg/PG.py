@@ -9,8 +9,8 @@ from pg.PG_util import pmutt, decompose_vec, RepBasisNorm, isOrthogonal, isindep
 from pg.read_IR_DSG import loadIR 
 import copy
 from pg.gramSchmidt import GramSchmidt
-from module.mod_dump import dump_4dc, dump_2dc, dump_1dr, dump_1dc
-from src.atomic_subs import show_sub4header
+from SymmAtom_mod.mod_dump import dump_4dc, dump_2dc, dump_1dr, dump_1dc
+from SymmAtom_src.atomic_subs import show_sub4header
 import itertools
 
 class Irrep:

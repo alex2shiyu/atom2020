@@ -1,11 +1,11 @@
 #! /usr/bin/env python
 
 import numpy as np
-from module.mod_read import read_2dc
+from SymmAtom_mod.mod_read import read_2dc
 from wanntb.soc import atom_hsoc
 from wanntb.tran import tran_op, tmat_c2r
 from scipy.special import perm
-from src.atomic_subs import show_subheader
+from atomic_subs import show_subheader
 
 class Atom():
     """

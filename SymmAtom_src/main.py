@@ -2,24 +2,24 @@
 import numpy as np
 import copy
 import sys
-from src.read_input import Atom
-from module.atomic_stream import atomic_make_cumat,atomic_tran_cumat#(norbs, amtrx, cumat, cumat_t)
-from module.mod_dump import dump_4dc, dump_2dc, dump_1dr, dump_1dc, dump_2di
-from module.mod_read import read_4dc
-from module.atomic_hmat import atomic_make_hmtrx#(norbs, totncfgs, ncfgs, state, invcd, invsn, eimp, umat, hmat)
-from src.atomic_subs   import atomic_state, decide_unitary_len 
+from read_input import Atom
+from SymmAtom_mod.atomic_stream import atomic_make_cumat,atomic_tran_cumat#(norbs, amtrx, cumat, cumat_t)
+from SymmAtom_mod.mod_dump import dump_4dc, dump_2dc, dump_1dr, dump_1dc, dump_2di
+from SymmAtom_mod.mod_read import read_4dc
+from SymmAtom_mod.atomic_hmat import atomic_make_hmtrx#(norbs, totncfgs, ncfgs, state, invcd, invsn, eimp, umat, hmat)
+from atomic_subs   import atomic_state, decide_unitary_len 
 from scipy.special import comb,perm
-from module.atomic_basis import atomic_make_basis#(norbs,totncfgs,ncfgs,ntots,nmin,nmax,nstat)
+from SymmAtom_mod.atomic_basis import atomic_make_basis#(norbs,totncfgs,ncfgs,ntots,nmin,nmax,nstat)
 from pg.PG import DPG, TranOrb, MBPG, MBPGsubs
 from pg.PG_util import Point_ID,pmutt,decompose_vec,get_TranOrb_param
 from pg.read_IR_DSG import *
 from wanntb.tran import tran_op, tran_unitary
-from module.atomic_angular import atomic_make_sp2np
-from module.gw_make_new import gw_make_newui 
+from SymmAtom_mod.atomic_angular import atomic_make_sp2np
+from SymmAtom_mod.gw_make_new import gw_make_newui 
 from timeit import default_timer as timer
 from datetime import timedelta
-from src.atomic_subs import atom_timer, show_header, show_subheader, show_error, show_success, show_over
-from src.atomic_subs import atom_timer_Nsubs,show_subsubheader, show_sub3header
+from atomic_subs import atom_timer, show_header, show_subheader, show_error, show_success, show_over
+from atomic_subs import atom_timer_Nsubs,show_subsubheader, show_sub3header
 
 # time 
 timedata = atom_timer()
